@@ -1,108 +1,114 @@
+<div align="center">
+
+<img src="docs/icon.svg" width="104" alt="KH Rechner app icon">
+
 # KH Rechner
 
+Carb calculator for Android. Enter what the label says and how much you ate,<br>
+and it tells you the grams of carbohydrates.
+
 [![CI](https://github.com/Brokoli5191/kh-rechner/actions/workflows/ci.yml/badge.svg)](https://github.com/Brokoli5191/kh-rechner/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/Brokoli5191/kh-rechner)](https://github.com/Brokoli5191/kh-rechner/releases/latest)
-![Android 13+](https://img.shields.io/badge/Android-13%2B%20(API%2033)-3ddc84)
+[![Latest release](https://img.shields.io/github/v/release/Brokoli5191/kh-rechner?label=release)](https://github.com/Brokoli5191/kh-rechner/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Brokoli5191/kh-rechner/total)](https://github.com/Brokoli5191/kh-rechner/releases)
+![Android 13+](https://img.shields.io/badge/Android-13%2B-3ddc84?logo=android&logoColor=white)
+[![Licence: Unlicense](https://img.shields.io/badge/licence-Unlicense-blue)](LICENSE)
 
-Android app that works out how many grams of carbohydrates you ate. You enter the carbs per 100 g
-from the label and how much of the food you had, as a percentage, a number of pieces or in grams.
-The app derives the other two and shows the result. German by default, English as second language.
+**[Download the APK](https://github.com/Brokoli5191/kh-rechner/releases/latest)** · [Build it yourself](docs/BUILDING.md)
 
-| Calculator | Dark, with KE | Material You | Saved | Settings |
-|---|---|---|---|---|
-| ![Calculator](docs/screenshots/calculator.png) | ![Dark theme](docs/screenshots/calculator-dark.png) | ![Dynamic colour](docs/screenshots/calculator-material-you.png) | ![Saved calculations](docs/screenshots/saved.png) | ![Settings](docs/screenshots/settings.png) |
+<img src="docs/screenshots/calculator.png" width="260" alt="Calculator with a scanned product and a result of about 19.8 g">
+<img src="docs/screenshots/calculator-aaps.png" width="260" alt="Calculator with the button that hands 20 g to AAPS">
+<img src="docs/screenshots/calculator-dark.png" width="260" alt="Calculator in the dark theme with a second result line in KE">
 
-The screenshots are rendered from the real app by a unit test, not taken on a phone. The first
-two use the built-in fallback colours. On a device the app follows your wallpaper (Material You)
-unless you switch that off.
+</div>
 
 ## What it does
 
-- All seven fields fit on one screen without scrolling. The three "eaten" fields are linked: the
-  one you edited last is the source, the other two are computed and shown in italics.
-- `≈` only appears in front of a number that really was rounded for display.
-- Barcode scan fills in the carbs per 100 g from [Open Food Facts](https://world.openfoodfacts.org).
-  Scanned products are cached, so a repeat scan works offline.
-- Save calculations, load them back with every input intact, rename, duplicate, delete with undo.
-- Export and import as JSON, with merge or replace.
-- Optional second result line in KE (10 g) or BE (12 g).
-- Light, dark or system theme, dynamic colour, per-app language through the Android system setting.
+Take a pack of wholegrain biscuits: 63.2 g of carbs per 100 g, 150 g in the pack, 12 biscuits. You
+ate two and a half. That is 31.25 g of biscuit and 19.75 g of carbohydrates, and nobody wants to
+work that out at the table. KH Rechner does it while you type.
 
-This is a calculator, not a medical device. Check the numbers before you dose insulin on them.
+"KH" is short for Kohlenhydrate, German for carbohydrates. The app speaks German and English.
+
+You fill in what you know:
+
+- carbs per 100 g, typed from the label or scanned from the barcode
+- total weight and number of pieces, if the food comes in pieces
+- how much you ate, as a percentage, in pieces or in grams
+
+The three "eaten" fields are linked. Whichever you edited last counts, and the other two are
+calculated and shown in italics. If all you have is a weight, carbs per 100 g and grams eaten are
+enough.
+
+## Features
+
+- All seven fields fit on one screen, with the keyboard open too.
+- `≈` marks a number that was rounded for display. Exact values are shown without it.
+- The barcode scan looks the product up on [Open Food Facts](https://world.openfoodfacts.org) and
+  fills in the carbs. A product you scanned once works offline afterwards.
+- Save a calculation under a name and load it later with all its inputs.
+- Export everything to a JSON file and import it on another phone.
+- A second result line in KE (10 g) or BE (12 g), if you count in those.
+- Colours follow your wallpaper (Material You), in light and dark.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/saved.png" width="250" alt="List of saved calculations"></td>
+    <td align="center"><img src="docs/screenshots/settings.png" width="250" alt="Settings screen"></td>
+    <td align="center"><img src="docs/screenshots/calculator-material-you.png" width="250" alt="Calculator in dynamic colours"></td>
+  </tr>
+  <tr>
+    <td align="center">Saved calculations</td>
+    <td align="center">Settings</td>
+    <td align="center">Material You colours</td>
+  </tr>
+</table>
+
+The pictures are rendered from the app by its own tests. The warm brown ones show the built-in
+colours, which you only see if you switch dynamic colours off.
 
 ## Install
 
-Download the APK from the [latest release](https://github.com/Brokoli5191/kh-rechner/releases/latest)
-and open it on a phone running Android 13 or newer. Barcode scanning needs Google Play services.
-Without them the scan button is hidden and everything else works.
+1. Download `kh-rechner-x.y.z.apk` from the
+   [latest release](https://github.com/Brokoli5191/kh-rechner/releases/latest).
+2. Open the file on your phone. Android asks once whether your browser or file manager may install
+   apps.
+3. To update later, install the newer APK over the old one. Your saved calculations stay.
 
-## Build
+The app needs Android 13 or newer. The barcode scanner needs Google Play services. On a phone
+without them the scan button is hidden and the rest works.
 
-You need JDK 17 or newer and the Android SDK. The Gradle wrapper fetches the rest, including the
-Android 17 (API 37.1) platform the build compiles against.
+## Sending carbs to AAPS
 
-```sh
-./gradlew assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
-./gradlew testDebugUnitTest      # unit tests and UI tests on the JVM (Robolectric)
-./gradlew lintDebug
-./gradlew testDebugUnitTest -Pscreenshots   # re-render docs/screenshots
-```
+If [AndroidAPS](https://github.com/nightscout/AndroidAPS) is on the phone, a button next to
+"speichern" shows the result in whole grams, for example "20 g an aaps". Tapping it copies that
+number and opens AAPS. You paste it into the carbs dialog there and confirm as usual.
 
-A release build without signing variables produces an unsigned APK:
+It stops there on purpose. AAPS has no way for another app to pre-fill that dialog, and the
+interfaces that do accept carbs book them without asking you. A number on the clipboard cannot
+dose anything by itself.
 
-```sh
-./gradlew assembleRelease
-```
+## What leaves your phone
 
-## Signing and releases
+A barcode scan sends the barcode number to Open Food Facts to look the product up. The app sends
+nothing else and has no account, no analytics and no ads. Saved calculations stay on the device,
+and in Android's own backup if you have that switched on.
 
-Pushing a tag `v1.2.3` runs `.github/workflows/release.yml`. It builds a signed release APK with
-version name `1.2.3`, version code `10203`, and attaches it to a GitHub Release with generated notes.
+## Before you rely on it
 
-Create a keystore once and keep it somewhere safe. An update only installs over an older version
-if it is signed with the same key.
+KH Rechner is a calculator, not a medical device. Labels can be wrong, Open Food Facts is filled
+in by volunteers, and typos happen. Look at the number before you dose insulin on it.
 
-```sh
-keytool -genkeypair -v -keystore release.jks -alias khrechner \
-  -keyalg RSA -keysize 4096 -validity 10000
-base64 -w0 release.jks        # macOS: base64 -i release.jks
-```
+## For developers
 
-Add four repository secrets under Settings → Secrets and variables → Actions:
+Kotlin, Jetpack Compose with Material 3 Expressive, Navigation 3 and DataStore, in a single module
+without a DI framework. The calculation is plain Kotlin with exact fractions and has its own
+tests. The UI tests run on the JVM and also produce the screenshots on this page.
 
-| Secret | Value |
-|---|---|
-| `KEYSTORE_BASE64` | output of the `base64` command |
-| `KEYSTORE_PASSWORD` | keystore password |
-| `KEY_ALIAS` | `khrechner`, or the alias you chose |
-| `KEY_PASSWORD` | key password |
+How to build, test and publish a release is in [docs/BUILDING.md](docs/BUILDING.md).
 
-To sign locally, set `KH_KEYSTORE_FILE`, `KH_KEYSTORE_PASSWORD`, `KH_KEY_ALIAS` and
-`KH_KEY_PASSWORD` in the environment before `./gradlew assembleRelease`. The keystore and
-`local.properties` are in `.gitignore`.
+## Licence and credits
 
-## Project layout
-
-One module, `:app`, package `app.brokoli5191.khrechner`:
-
-- `domain/`: the calculation, pure Kotlin. It uses exact fractions, which is how it knows
-  whether a displayed value was rounded.
-- `data/`: DataStore with kotlinx.serialization, export and import, the Open Food Facts client,
-  the barcode scanner wrapper.
-- `ui/`: Compose, one package per screen, Material 3 Expressive, Navigation 3.
-
-The export file is JSON with a `schemaVersion` field (currently `1`). It holds the saved
-calculations and the product cache. Files from a newer schema version are refused with a message.
-
-## Not included: sending carbs to AAPS
-
-The plan was to hand the result to AndroidAPS as a pre-filled entry that you confirm there. Stock
-AAPS has no entry point for that. Its exported receiver takes glucose data and SMS, and the source
-of 3.2.0.4, 3.3.2.1, 3.4.2.6 and 4.0.0 has nothing in it that takes carbs. The only local way to
-pass carbs in is the Garmin HTTP endpoint, and that one writes them straight to the database
-without a confirmation. That is the opposite of what was wanted, so the button is not there.
-
-## Licence
-
-Public domain, see [LICENSE](LICENSE). The icons are
+The code is in the public domain, see [LICENSE](LICENSE). Product data comes from
+[Open Food Facts](https://world.openfoodfacts.org) under the
+[Open Database License](https://opendatacommons.org/licenses/odbl/1-0/). The icons are
 [Material Symbols](https://fonts.google.com/icons) under the Apache License 2.0.
