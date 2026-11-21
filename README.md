@@ -74,8 +74,9 @@ colours, which you only see if you switch dynamic colours off.
    apps.
 3. To update later, install the newer APK over the old one. Your saved calculations stay.
 
-The app needs Android 13 or newer. The barcode scanner needs Google Play services. On a phone
-without them the scan button is hidden and the rest works.
+The app needs Android 13 or newer. For barcodes it uses Google's scanner if Google Play services
+can provide it. If not, it scans with its own, and asks for the camera permission the first time
+you scan.
 
 ## Sending carbs to AAPS
 
@@ -90,8 +91,9 @@ dose anything by itself.
 ## What leaves your phone
 
 A barcode scan sends the barcode number to Open Food Facts to look the product up. The app sends
-nothing else and has no account, no analytics and no ads. Saved calculations stay on the device,
-and in Android's own backup if you have that switched on.
+nothing else and has no account, no analytics and no ads. Its own scanner reads the camera picture
+on the phone and does not store it or send it anywhere. Saved calculations stay on the device, and
+in Android's own backup if you have that switched on.
 
 ## Before you rely on it
 

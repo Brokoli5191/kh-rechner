@@ -10,7 +10,7 @@ open class KhRechnerApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = createContainer()
-        // Fetch the barcode scanner module in the background so the first scan does not have to.
+        // Fetch Google's scanner module in the background; until it is there the app scans itself.
         container.scanner.install()
     }
 

@@ -41,9 +41,14 @@ class SettingsViewModel(
     private val backup: BackupRepository,
     private val scanner: ScannerController,
     libraries: LibraryCatalog,
+    /** False on a device without a camera, where neither scanner can work. */
+    val cameraAvailable: Boolean,
 ) : ViewModel() {
 
     val scannerStatus: StateFlow<ScannerStatus> = scanner.status
+
+    /** Version of Google Play services, quoted next to a failed scanner download. */
+    val servicesVersion: String? get() = scanner.servicesVersion
 
     /** Read once from the bundled list; empty until then. */
     val libraries: StateFlow<List<LibraryGroup>> = flow { emit(libraries.load()) }

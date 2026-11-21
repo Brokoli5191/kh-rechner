@@ -75,17 +75,17 @@
     <string name="lookup_no_carbs">für „%1$s“ ist kein kh-wert hinterlegt.</string>
     <string name="lookup_offline">keine verbindung. wert bitte selbst eintragen.</string>
 
-    <!-- barcode scanner: one-off module download and failures -->
-    <string name="scanner_installing">scanner wird geladen …</string>
-    <string name="scanner_installing_percent">scanner wird geladen … %1$d %%</string>
-    <string name="scanner_still_installing">der scanner wird noch geladen. tipp gleich nochmal auf das symbol.</string>
-    <string name="scanner_install_failed_metered">der scanner wird nur über wlan geladen. verbinde dich mit einem wlan und versuch es nochmal.</string>
-    <string name="scanner_install_failed_storage">zu wenig speicher, um den scanner zu laden.</string>
-    <string name="scanner_install_failed_other">der scanner konnte nicht geladen werden (fehler %1$d).</string>
-    <string name="scan_failed_not_ready">der scanner ist geladen, startet aber noch nicht. bitte gleich nochmal versuchen.</string>
-    <string name="scan_failed_play_services">google play-dienste sind zu alt für den scanner. bitte aktualisieren.</string>
-    <string name="scan_failed_camera">google play-dienste brauchen die kamera-berechtigung, um zu scannen.</string>
-    <string name="scan_failed_other">scannen fehlgeschlagen (fehler %1$d).</string>
+    <!-- the scanner built into the app, used where google's cannot run -->
+    <string name="scanner_starting">kamera startet …</string>
+    <string name="scanner_hint">barcode in den rahmen halten</string>
+    <string name="action_close_scanner">scanner schließen</string>
+    <string name="action_torch_on">licht einschalten</string>
+    <string name="action_torch_off">licht ausschalten</string>
+    <string name="scanner_permission_title">ohne kamera kein scan</string>
+    <string name="scanner_permission_text">die app liest den barcode direkt aus dem kamerabild. das bild verlässt das gerät nicht und wird nicht gespeichert.</string>
+    <string name="action_allow_camera">kamera erlauben</string>
+    <string name="scanner_camera_failed_title">die kamera lässt sich nicht öffnen</string>
+    <string name="scanner_camera_failed_text">vielleicht verwendet sie gerade eine andere app. (%1$s)</string>
 
     <!-- saved -->
     <string name="saved_empty">noch nichts gespeichert</string>
@@ -125,12 +125,21 @@
     <string name="settings_about">über</string>
     <string name="about_description">rechnet aus, wie viele gramm kohlenhydrate du gegessen hast.</string>
     <string name="about_scanner">barcode-scanner</string>
-    <string name="scanner_status_unsupported">nicht verfügbar, weil google play-dienste fehlen</string>
     <string name="scanner_status_checking">wird geprüft …</string>
-    <string name="scanner_status_ready">bereit</string>
-    <string name="scanner_status_not_installed">noch nicht geladen</string>
-    <string name="scanner_status_installing">wird geladen …</string>
-    <string name="scanner_status_installing_percent">wird geladen … %1$d %%</string>
+    <string name="scanner_status_ready">google-scanner bereit</string>
+    <string name="scanner_status_no_camera">nicht verfügbar: dieses gerät hat keine kamera.</string>
+    <!-- everything below follows scanner_builtin_active in the same line -->
+    <string name="scanner_builtin_active">die app scannt selbst.</string>
+    <string name="scanner_status_unsupported">google play-dienste fehlen.</string>
+    <string name="scanner_status_not_installed">der google-scanner ist noch nicht geladen.</string>
+    <string name="scanner_status_installing">der google-scanner wird geladen …</string>
+    <string name="scanner_status_installing_percent">der google-scanner wird geladen … %1$d %%</string>
+    <string name="scanner_install_failed_metered">der google-scanner wird nur über wlan geladen.</string>
+    <string name="scanner_install_failed_storage">für den google-scanner fehlt speicherplatz.</string>
+    <string name="scanner_install_failed_rejected">google play-dienste lehnen es ab, den google-scanner zu laden (%1$s).</string>
+    <string name="scanner_install_failed_download">der download des google-scanners ist fehlgeschlagen (%1$s).</string>
+    <string name="scanner_install_failed_not_sent">die anfrage an google play-dienste ist gescheitert (%1$s).</string>
+    <string name="scanner_services_version">play-dienste %1$s.</string>
     <string name="action_load">laden</string>
     <string name="action_retry">nochmal</string>
     <string name="action_back">zurück</string>
