@@ -61,7 +61,8 @@
     <!-- calculator: barcode -->
     <string name="action_scan">scan barcode</string>
     <string name="action_remove_product">remove product</string>
-    <string name="product_weight_suggestion">use %1$s g as total weight</string>
+    <!-- %1$s is "=" or "≈", %2$s the weight of one piece -->
+    <string name="pieces_estimated_hint">piece count estimated, please check: 1 piece %1$s %2$s g</string>
     <string name="lookup_loading">looking up product</string>
     <string name="lookup_not_found">product not found. please enter the value yourself.</string>
     <string name="lookup_no_carbs">no carb value on record for “%1$s”.</string>

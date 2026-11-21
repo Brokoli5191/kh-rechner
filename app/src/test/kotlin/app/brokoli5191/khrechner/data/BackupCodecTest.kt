@@ -18,7 +18,16 @@ class BackupCodecTest {
         id = "b", name = "brot", createdAt = 1_700_000_100_000,
         carbsPer100 = "45", eatenSource = EatenSource.GRAMS, eatenValue = "60",
     )
-    private val nutella = CachedProduct("3017624010701", "Nutella", "57.5", "400", fetchedAt = 1_700_000_200_000)
+    private val nutella = CachedProduct(
+        barcode = "3017624010701",
+        name = "Nutella",
+        carbsPer100 = "57.5",
+        quantityGrams = "400",
+        pieceCount = "8",
+        pieceCountEstimated = true,
+        fetchedAt = 1_700_000_200_000,
+        revision = CachedProduct.REVISION,
+    )
     private val data = AppData(entries = listOf(apple, bread), products = listOf(nutella))
 
     private fun decoded(text: String): AppData = (BackupCodec.decode(text) as ImportOutcome.Success).data
@@ -99,6 +108,10 @@ class BackupCodecTest {
         assertEquals(
             ImportError.INVALID_CONTENT,
             failure("""{"schemaVersion":1,"products":[{"barcode":"12ab","carbsPer100":"5","fetchedAt":1}]}""").error,
+        )
+        assertEquals(
+            ImportError.INVALID_CONTENT,
+            failure("""{"schemaVersion":1,"products":[{"barcode":"40000001","carbsPer100":"5","pieceCount":"2.5","fetchedAt":1}]}""").error,
         )
     }
 

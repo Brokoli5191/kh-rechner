@@ -29,6 +29,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.brokoli5191.khrechner.TestApplication
 import app.brokoli5191.khrechner.data.InstallFailure
 import app.brokoli5191.khrechner.data.InstallUpdate
+import app.brokoli5191.khrechner.data.ProductPieces
 import app.brokoli5191.khrechner.data.RemoteProduct
 import app.brokoli5191.khrechner.data.ScanResult
 import app.brokoli5191.khrechner.data.Settings
@@ -86,11 +87,9 @@ class ScreenshotTest {
 
     private fun fillExample() {
         app.scanner.next = ScanResult.Code("9001234567890")
-        app.productSource.answer = RemoteProduct.Found("vollkornkekse", "63.2", "150")
+        app.productSource.answer = RemoteProduct.Found("vollkornkekse", "63.2", "150", ProductPieces(12, estimated = false))
         compose.onNodeWithContentDescription("barcode scannen").performClick()
         awaitText("vollkornkekse")
-        compose.onNodeWithText("gesamtgewicht 150 g übernehmen").performClick()
-        field("anzahl der stücke").performTextInput("12")
         field("gegessen in stücken").performScrollTo().performTextInput("2,5")
         compose.waitUntil(5_000) {
             compose.onAllNodes(hasContentDescription("gramm kohlenhydrate", substring = true)).fetchSemanticsNodes().isNotEmpty()
@@ -109,6 +108,21 @@ class ScreenshotTest {
         capture("calculator-empty")
         fillExample()
         capture("calculator")
+    }
+
+    /** A piece count worked out from the serving size, with the note that says so. */
+    @Test
+    fun calculatorWithEstimatedPieces() {
+        app.scanner.next = ScanResult.Code("4017100291005")
+        app.productSource.answer = RemoteProduct.Found("choco leibniz edelherb", "58", "125", ProductPieces(9, estimated = true))
+        launch()
+        compose.onNodeWithContentDescription("barcode scannen").performClick()
+        awaitText("stückzahl geschätzt")
+        field("gegessen in stücken").performScrollTo().performTextInput("2")
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasContentDescription("gramm kohlenhydrate", substring = true)).fetchSemanticsNodes().isNotEmpty()
+        }
+        capture("calculator-estimate")
     }
 
     @Test

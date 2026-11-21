@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -58,7 +57,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -171,7 +169,6 @@ fun CalculatorScreen(
                 }
             }
         },
-        onApplyWeight = viewModel::applySuggestedWeight,
         onClearProduct = viewModel::clearProduct,
         onSave = { showSaveDialog = true },
         onReset = {
@@ -224,7 +221,6 @@ fun CalculatorContent(
     showAaps: Boolean,
     onScan: () -> Unit,
     onSendToAaps: () -> Unit,
-    onApplyWeight: () -> Unit,
     onClearProduct: () -> Unit,
     onSave: () -> Unit,
     onReset: () -> Unit,
@@ -286,7 +282,7 @@ fun CalculatorContent(
             Popping(visible = state.product != null, motion = motion) {
                 // Keeps showing the last product while the row animates out.
                 val product = rememberLast(state.product)
-                if (product != null) ProductChips(product, onApplyWeight, onClearProduct)
+                if (product != null) ProductChip(product, onClearProduct)
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(TileGap)) {
@@ -351,7 +347,7 @@ fun CalculatorContent(
             }
             GroupMessage(
                 message = errors.firstMessage(CalcField.CARBS_PER_100, CalcField.TOTAL_WEIGHT, CalcField.PIECE_COUNT),
-                hint = state.lookup.message(),
+                hint = state.lookup.message() ?: state.piecesEstimateHint(),
                 motion = motion,
             )
 
@@ -645,45 +641,27 @@ private fun <T : Any> rememberLast(value: T?): T? {
     return last
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/** The scanned product; tapping it detaches the product from the form. */
 @Composable
-private fun ProductChips(product: ProductInfo, onApplyWeight: () -> Unit, onClear: () -> Unit) {
-    val separator = LocalDecimalSeparator.current
-    FlowRow(
+private fun ProductChip(product: ProductInfo, onClear: () -> Unit) {
+    InputChip(
+        selected = true,
+        onClick = onClear,
         modifier = Modifier.padding(bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        InputChip(
-            selected = true,
-            onClick = onClear,
-            label = { Text(product.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            leadingIcon = {
-                Icon(painterResource(R.drawable.ic_nutrition), contentDescription = null, modifier = Modifier.size(InputChipDefaults.IconSize))
-            },
-            trailingIcon = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_close),
-                    contentDescription = stringResource(R.string.action_remove_product),
-                    modifier = Modifier.size(InputChipDefaults.IconSize),
-                )
-            },
-        )
-        product.suggestedWeight?.let { weight ->
-            SuggestionChip(
-                onClick = onApplyWeight,
-                label = { Text(stringResource(R.string.product_weight_suggestion, weight.withSeparator(separator))) },
-                icon = { Icon(painterResource(R.drawable.ic_scale), contentDescription = null, modifier = Modifier.size(18.dp)) },
+        label = { Text(product.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingIcon = {
+            Icon(painterResource(R.drawable.ic_nutrition), contentDescription = null, modifier = Modifier.size(InputChipDefaults.IconSize))
+        },
+        trailingIcon = {
+            Icon(
+                painter = painterResource(R.drawable.ic_close),
+                contentDescription = stringResource(R.string.action_remove_product),
+                modifier = Modifier.size(InputChipDefaults.IconSize),
             )
-        }
-    }
+        },
+    )
 }
 
-// --- result ---------------------------------------------------------------------------------
-
-/**
- * Result and actions on a tonal sheet docked above the navigation bar, so the number stays in
- * view while typing. [compact] (keyboard up) drops the buttons: the result matters more.
- */
 @Composable
 private fun ResultPanel(
     carbsEaten: DisplayNumber?,
@@ -926,6 +904,21 @@ private fun unitLine(state: CalculatorUiState, unit: CarbUnit): String? {
         CarbUnit.BE -> stringResource(R.string.result_unit_be, shown)
         CarbUnit.NONE -> null
     }
+}
+
+/**
+ * Says that the piece count is a guess and what it assumes, so the user can check it against the
+ * package: Open Food Facts knows the serving size, not what one piece weighs.
+ */
+@Composable
+private fun CalculatorUiState.piecesEstimateHint(): String? {
+    if (product?.piecesEstimated != true) return null
+    val perPiece = derived[CalcField.GRAMS_PER_PIECE] ?: return null
+    return stringResource(
+        R.string.pieces_estimated_hint,
+        if (perPiece.isApproximate) APPROXIMATELY else "=",
+        perPiece.text.withSeparator(LocalDecimalSeparator.current),
+    )
 }
 
 @Composable

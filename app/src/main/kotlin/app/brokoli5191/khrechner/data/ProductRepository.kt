@@ -19,12 +19,20 @@ class ProductRepository(
 
     suspend fun lookup(barcode: String): ProductLookup {
         val cached = store.data.first().products.firstOrNull { it.barcode == barcode }
-        if (cached != null && now() - cached.fetchedAt < FRESH_FOR_MILLIS) {
-            return ProductLookup.Found(cached, fromCache = true)
-        }
+        val fresh = cached != null && cached.revision >= CachedProduct.REVISION && now() - cached.fetchedAt < FRESH_FOR_MILLIS
+        if (cached != null && fresh) return ProductLookup.Found(cached, fromCache = true)
         return when (val remote = source.fetch(barcode)) {
             is RemoteProduct.Found -> {
-                val product = CachedProduct(barcode, remote.name, remote.carbsPer100, remote.quantityGrams, fetchedAt = now())
+                val product = CachedProduct(
+                    barcode = barcode,
+                    name = remote.name,
+                    carbsPer100 = remote.carbsPer100,
+                    quantityGrams = remote.quantityGrams,
+                    pieceCount = remote.pieces?.count?.toString(),
+                    pieceCountEstimated = remote.pieces?.estimated == true,
+                    fetchedAt = now(),
+                    revision = CachedProduct.REVISION,
+                )
                 store.updateData { data ->
                     val others = data.products.filterNot { it.barcode == barcode }
                     // Oldest lookups fall out first once the cache is full.

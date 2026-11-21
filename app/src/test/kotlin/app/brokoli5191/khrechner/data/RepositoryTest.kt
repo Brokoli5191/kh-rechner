@@ -80,7 +80,7 @@ class RepositoryTest {
         val products = ProductRepository(store, source, now = { clock })
 
         val first = products.lookup(barcode) as ProductLookup.Found
-        assertEquals(CachedProduct(barcode, "Nutella", "57.5", "400", fetchedAt = 1_000), first.product)
+        assertEquals(CachedProduct(barcode, "Nutella", "57.5", "400", fetchedAt = 1_000, revision = CachedProduct.REVISION), first.product)
         assertEquals(false, first.fromCache)
 
         source.answer = RemoteProduct.Unavailable
@@ -105,6 +105,38 @@ class RepositoryTest {
         assertEquals("56", refreshed.product.carbsPer100)
         assertEquals(false, refreshed.fromCache)
         assertEquals(1, store.value.products.size)
+    }
+
+    @Test
+    fun `pieces are cached with the product`() = runTest {
+        val source = FakeSource(RemoteProduct.Found("Kekse", "58", "125", ProductPieces(9, estimated = true)))
+        val products = ProductRepository(store, source, now = { clock })
+        val product = (products.lookup(barcode) as ProductLookup.Found).product
+        assertEquals("9", product.pieceCount)
+        assertEquals(true, product.pieceCountEstimated)
+
+        source.answer = RemoteProduct.Unavailable
+        assertEquals(product, (products.lookup(barcode) as ProductLookup.Found).product)
+    }
+
+    @Test
+    fun `an entry cached before pieces were read is fetched again, and still used when offline`() = runTest {
+        // What version 1.2 left in the cache: no pieces, no revision.
+        val old = CachedProduct(barcode, "Kekse", "58", "125", fetchedAt = clock)
+        store.updateData { it.copy(products = listOf(old)) }
+        val source = FakeSource(RemoteProduct.Unavailable)
+        val products = ProductRepository(store, source, now = { clock })
+        assertEquals(old, (products.lookup(barcode) as ProductLookup.Found).product)
+        assertEquals(1, source.calls)
+
+        source.answer = RemoteProduct.Found("Kekse", "58", "125", ProductPieces(9, estimated = true))
+        val refreshed = products.lookup(barcode) as ProductLookup.Found
+        assertEquals("9", refreshed.product.pieceCount)
+        assertEquals(false, refreshed.fromCache)
+
+        // Up to date now: answered from the cache.
+        products.lookup(barcode)
+        assertEquals(2, source.calls)
     }
 
     @Test

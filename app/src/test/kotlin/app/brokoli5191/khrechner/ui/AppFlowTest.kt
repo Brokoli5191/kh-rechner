@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.provider.Settings as SystemSettings
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
@@ -30,6 +31,7 @@ import app.brokoli5191.khrechner.BuildConfig
 import app.brokoli5191.khrechner.TestApplication
 import app.brokoli5191.khrechner.data.InstallFailure
 import app.brokoli5191.khrechner.data.InstallUpdate
+import app.brokoli5191.khrechner.data.ProductPieces
 import app.brokoli5191.khrechner.data.RemoteProduct
 import app.brokoli5191.khrechner.data.ScanResult
 import app.brokoli5191.khrechner.data.Settings
@@ -182,29 +184,72 @@ class AppFlowTest {
     }
 
     @Test
-    fun `a scanned product fills the carb value and offers its weight`() {
-        app.scanner.next = ScanResult.Code("3017624010701")
-        app.productSource.answer = RemoteProduct.Found("Nutella", "57.5", "400")
+    fun `a scanned product fills in carbs, package weight and piece count`() {
+        app.scanner.next = ScanResult.Code("4017100291005")
+        app.productSource.answer = RemoteProduct.Found("Choco Leibniz", "58", "125", ProductPieces(9, estimated = true))
 
-        compose.onNodeWithContentDescription("barcode scannen").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Nutella")).fetchSemanticsNodes().isNotEmpty() }
-        field("kh pro 100 g").assertTextContains("57,5")
-        // Offered, not applied.
-        field("gesamtgewicht").assertTextContains("")
-        compose.onNodeWithText("gesamtgewicht 400 g übernehmen").performClick()
-        field("gesamtgewicht").assertTextContains("400")
-        compose.onNodeWithText("gesamtgewicht 400 g übernehmen").assertDoesNotExist()
+        scan()
+        awaitText("Choco Leibniz")
+        field("kh pro 100 g").assertTextContains("58")
+        field("gesamtgewicht").assertTextContains("125")
+        field("anzahl der stücke").assertTextContains("9")
+        // The count is a guess from the serving size, and the screen says what it assumes.
+        awaitText("stückzahl geschätzt, bitte prüfen: 1 stück ≈ 13,9 g")
 
-        // Typing over the value detaches it from the product.
+        field("gegessen in stücken").performScrollTo().performTextInput("2")
+        awaitResult("ungefähr 16,1 gramm kohlenhydrate")
+
+        // Once the user sets the count, it is theirs and the note goes.
+        field("anzahl der stücke").performTextReplacement("10")
+        compose.onNode(hasText("geschätzt", substring = true)).assertDoesNotExist()
+
+        // Typing over the carb value detaches it from the product; weight and count stay.
         field("kh pro 100 g").performTextReplacement("50")
-        compose.onNodeWithText("Nutella").assertDoesNotExist()
+        compose.onNodeWithText("Choco Leibniz").assertDoesNotExist()
+        field("gesamtgewicht").assertTextContains("125")
 
         // Same barcode again with the network gone: answered from the cache, no second request.
         app.productSource.answer = RemoteProduct.Unavailable
-        compose.onNodeWithContentDescription("barcode scannen").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Nutella")).fetchSemanticsNodes().isNotEmpty() }
-        field("kh pro 100 g").assertTextContains("57,5")
-        assertEquals(listOf("3017624010701"), app.productSource.requested)
+        scan()
+        awaitText("Choco Leibniz")
+        field("kh pro 100 g").assertTextContains("58")
+        field("anzahl der stücke").assertTextContains("9")
+        assertEquals(listOf("4017100291005"), app.productSource.requested)
+    }
+
+    @Test
+    fun `a label that states the piece count needs no note`() {
+        app.scanner.next = ScanResult.Code("4000000000002")
+        app.productSource.answer = RemoteProduct.Found("riegel", "60", "150", ProductPieces(6, estimated = false))
+        scan()
+        awaitText("riegel")
+        field("anzahl der stücke").assertTextContains("6")
+        compose.onNode(hasText("geschätzt", substring = true)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the next scan does not inherit weight and pieces from the last product`() {
+        app.scanner.next = ScanResult.Code("4000000000002")
+        app.productSource.answer = RemoteProduct.Found("riegel", "60", "150", ProductPieces(6, estimated = false))
+        scan()
+        awaitText("riegel")
+
+        // A product Open Food Facts knows only the carbs of.
+        app.scanner.next = ScanResult.Code("4000000000003")
+        app.productSource.answer = RemoteProduct.Found("marmelade", "55", null)
+        scan()
+        awaitText("marmelade")
+        field("kh pro 100 g").assertTextContains("55")
+        field("gesamtgewicht").assert(hasText("150").not())
+        field("anzahl der stücke").assert(hasText("6").not())
+
+        // What the user typed is theirs and survives a scan that knows no better.
+        field("gesamtgewicht").performTextInput("340")
+        app.scanner.next = ScanResult.Code("4000000000004")
+        app.productSource.answer = RemoteProduct.Found("honig", "80", null)
+        scan()
+        awaitText("honig")
+        field("gesamtgewicht").assertTextContains("340")
     }
 
     @Test

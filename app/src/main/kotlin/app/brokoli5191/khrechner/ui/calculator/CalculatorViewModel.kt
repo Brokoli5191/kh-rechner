@@ -53,8 +53,13 @@ class CalculatorFields internal constructor(
     val eatenGrams: NumberFieldModel,
 )
 
-/** Product a barcode scan filled in. [suggestedWeight] is offered once and never applied on its own. */
-data class ProductInfo(val name: String, val suggestedWeight: String? = null)
+/**
+ * Product a barcode scan filled in.
+ *
+ * @param piecesEstimated the piece count in the form is a guess from the product's serving size
+ *   and has not been touched since; the screen says so until the user edits it.
+ */
+data class ProductInfo(val name: String, val piecesEstimated: Boolean = false)
 
 sealed interface LookupStatus {
     data object Idle : LookupStatus
@@ -103,8 +108,9 @@ class CalculatorViewModel(
 
     // Typing over a scanned value means it no longer belongs to that product.
     private val carbsPer100: NumberFieldModel = field(savedState[KEY_CARBS], DECIMAL) { clearProduct() }
-    private val totalWeight: NumberFieldModel = field(savedState[KEY_WEIGHT], DECIMAL)
-    private val pieceCount: NumberFieldModel = field(savedState[KEY_PIECES], WHOLE)
+    // Changing the weight or the count makes the count the user's own, not a guess any more.
+    private val totalWeight: NumberFieldModel = field(savedState[KEY_WEIGHT], DECIMAL) { confirmPieces() }
+    private val pieceCount: NumberFieldModel = field(savedState[KEY_PIECES], WHOLE) { confirmPieces() }
     private val eatenPercent: NumberFieldModel = newEatenField(EatenSource.PERCENT)
     private val eatenPieces: NumberFieldModel = newEatenField(EatenSource.PIECES)
     private val eatenGrams: NumberFieldModel = newEatenField(EatenSource.GRAMS)
@@ -115,7 +121,7 @@ class CalculatorViewModel(
 
     private val _uiState = MutableStateFlow(
         CalculatorUiState(
-            product = savedState.get<String>(KEY_PRODUCT)?.let { ProductInfo(it, savedState[KEY_PRODUCT_WEIGHT]) },
+            product = savedState.get<String>(KEY_PRODUCT)?.let { ProductInfo(it, savedState[KEY_PIECES_ESTIMATED] ?: false) },
         ),
     )
     val uiState: StateFlow<CalculatorUiState> = _uiState.asStateFlow()
@@ -207,6 +213,9 @@ class CalculatorViewModel(
         for (source in EatenSource.entries) {
             eatenField(source).state.setTextAndPlaceCursorAtEnd(if (source == input.eatenSource) input.eatenValue else "")
         }
+        // What is in the form now was not put there by a scan.
+        savedState[KEY_SCANNED_WEIGHT] = null
+        savedState[KEY_SCANNED_PIECES] = null
         setProduct(snapshot.product)
         _uiState.update { it.copy(lookup = LookupStatus.Idle) }
     }
@@ -248,11 +257,12 @@ class CalculatorViewModel(
                 is ProductLookup.Found -> {
                     val product = lookup.product
                     carbsPer100.state.setTextAndPlaceCursorAtEnd(product.carbsPer100)
+                    fillFromScan(totalWeight, product.quantityGrams, KEY_SCANNED_WEIGHT)
+                    fillFromScan(pieceCount, product.pieceCount, KEY_SCANNED_PIECES)
                     setProduct(
                         ProductInfo(
                             name = product.name.ifBlank { barcode },
-                            // Nothing to offer if the field already holds that weight.
-                            suggestedWeight = product.quantityGrams?.takeIf { it != DecimalText.normalize(totalWeight.text) },
+                            piecesEstimated = product.pieceCount != null && product.pieceCountEstimated,
                         ),
                     )
                     LookupStatus.Idle
@@ -265,12 +275,23 @@ class CalculatorViewModel(
         }
     }
 
-    /** The user accepted the package weight the scanned product suggested. */
-    fun applySuggestedWeight() {
-        val product = _uiState.value.product ?: return
-        val weight = product.suggestedWeight ?: return
-        totalWeight.state.setTextAndPlaceCursorAtEnd(weight)
-        setProduct(product.copy(suggestedWeight = null))
+    /**
+     * Puts what a scan knows about the package into [field]. Where the product has no value, a
+     * value the previous scan left there goes, because it belongs to another product; one the
+     * user typed stays.
+     *
+     * @param key where the value this scan filled in is remembered for the next one.
+     */
+    private fun fillFromScan(field: NumberFieldModel, value: String?, key: String) {
+        val leftByLastScan = field.text.isNotEmpty() && field.text == savedState.get<String>(key)
+        val text = value ?: if (leftByLastScan) "" else field.text
+        if (field.text != text) field.state.setTextAndPlaceCursorAtEnd(text)
+        savedState[key] = value
+    }
+
+    private fun confirmPieces() {
+        val product = _uiState.value.product
+        if (product?.piecesEstimated == true) setProduct(product.copy(piecesEstimated = false))
     }
 
     fun clearProduct() {
@@ -282,7 +303,7 @@ class CalculatorViewModel(
     private fun setProduct(product: ProductInfo?) {
         _uiState.update { it.copy(product = product) }
         savedState[KEY_PRODUCT] = product?.name
-        savedState[KEY_PRODUCT_WEIGHT] = product?.suggestedWeight
+        savedState[KEY_PIECES_ESTIMATED] = product?.piecesEstimated
     }
 
     // --- field plumbing ---------------------------------------------------------------------
@@ -345,6 +366,8 @@ class CalculatorViewModel(
         const val KEY_SOURCE = "source"
         const val KEY_EATEN = "eaten"
         const val KEY_PRODUCT = "product"
-        const val KEY_PRODUCT_WEIGHT = "productWeight"
+        const val KEY_PIECES_ESTIMATED = "piecesEstimated"
+        const val KEY_SCANNED_WEIGHT = "scannedWeight"
+        const val KEY_SCANNED_PIECES = "scannedPieces"
     }
 }

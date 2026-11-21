@@ -69,7 +69,8 @@
     <!-- calculator: barcode -->
     <string name="action_scan">barcode scannen</string>
     <string name="action_remove_product">produkt entfernen</string>
-    <string name="product_weight_suggestion">gesamtgewicht %1$s g übernehmen</string>
+    <!-- %1$s is "=" or "≈", %2$s the weight of one piece -->
+    <string name="pieces_estimated_hint">stückzahl geschätzt, bitte prüfen: 1 stück %1$s %2$s g</string>
     <string name="lookup_loading">produkt wird gesucht</string>
     <string name="lookup_not_found">produkt nicht gefunden. wert bitte selbst eintragen.</string>
     <string name="lookup_no_carbs">für „%1$s“ ist kein kh-wert hinterlegt.</string>
