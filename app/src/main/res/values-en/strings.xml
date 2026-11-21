@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_title">carb calculator</string>
+
+    <!-- navigation -->
+    <string name="nav_calculate">calculate</string>
+    <string name="nav_saved">saved</string>
+    <string name="nav_settings">settings</string>
+
+    <!-- generic actions -->
+    <string name="action_save">save</string>
+    <string name="action_reset">reset</string>
+    <string name="action_cancel">cancel</string>
+    <string name="action_undo">undo</string>
+
+    <!-- calculator: fields -->
+    <string name="section_eaten">eaten</string>
+    <string name="field_carbs_per_100">carbs per 100 g</string>
+    <string name="field_total_weight">total weight</string>
+    <string name="field_piece_count">number of pieces</string>
+    <string name="field_grams_per_piece">grams per piece</string>
+    <string name="field_eaten_percent">eaten in percent</string>
+    <string name="field_eaten_pieces">eaten in pieces</string>
+    <string name="field_eaten_grams">eaten in g</string>
+    <string name="field_eaten_percent_short">percent</string>
+    <string name="field_eaten_pieces_short">pieces</string>
+    <string name="field_eaten_grams_short">grams</string>
+    <string name="state_calculated">calculated</string>
+
+    <!-- calculator: result -->
+    <string name="result_label">carbs eaten</string>
+    <string name="result_unit_ke">%1$s ke</string>
+    <string name="result_unit_be">%1$s be</string>
+    <string name="a11y_result">%1$s grams of carbohydrates</string>
+    <string name="a11y_result_approx">about %1$s grams of carbohydrates</string>
+    <string name="a11y_result_none">no result yet</string>
+
+    <!-- calculator: inline errors -->
+    <string name="error_invalid_number">not a valid number</string>
+    <string name="error_negative">must not be negative</string>
+    <string name="error_not_positive">must be greater than 0</string>
+    <string name="error_not_whole">whole numbers only</string>
+    <string name="error_above_100">at most 100 g per 100 g</string>
+    <string name="error_exceeds_percent">more than 100 %</string>
+    <string name="error_exceeds_pieces">more pieces than there are</string>
+    <string name="error_exceeds_grams">more than the total weight</string>
+    <string name="error_needs_total_weight">needs the total weight</string>
+    <string name="error_needs_piece_weight">needs total weight and number of pieces</string>
+
+    <!-- calculator: save and reset -->
+    <string name="save_dialog_title">save calculation</string>
+    <string name="name_placeholder">name, e.g. apple</string>
+    <string name="snackbar_saved">saved</string>
+    <string name="snackbar_reset">reset</string>
+
+    <!-- calculator: barcode -->
+    <string name="action_scan">scan barcode</string>
+    <string name="action_remove_product">remove product</string>
+    <string name="product_weight_suggestion">use %1$s g as total weight</string>
+    <string name="lookup_loading">looking up product</string>
+    <string name="lookup_not_found">product not found. please enter the value yourself.</string>
+    <string name="lookup_no_carbs">no carb value on record for “%1$s”.</string>
+    <string name="lookup_offline">no connection. please enter the value yourself.</string>
+    <string name="lookup_scanner_unavailable">the scanner is not ready yet. please try again in a moment.</string>
+
+    <!-- saved -->
+    <string name="saved_empty">nothing saved yet</string>
+    <string name="saved_edit">edit %1$s</string>
+    <string name="saved_no_result">no result</string>
+    <string name="action_rename">rename</string>
+    <string name="action_duplicate">duplicate</string>
+    <string name="action_delete">delete</string>
+    <string name="duplicate_name">%1$s (copy)</string>
+    <string name="snackbar_deleted">“%1$s” deleted</string>
+
+    <!-- settings -->
+    <string name="settings_appearance">appearance</string>
+    <string name="theme_system">system</string>
+    <string name="theme_light">light</string>
+    <string name="theme_dark">dark</string>
+    <string name="settings_dynamic_color">dynamic colours</string>
+    <string name="settings_dynamic_color_summary">take colours from the wallpaper</string>
+    <string name="settings_language">language</string>
+    <string name="language_system">system</string>
+    <string name="settings_result">result</string>
+    <string name="settings_carb_unit">additional unit</string>
+    <string name="settings_carb_unit_summary">ke = 10 g carbs, be = 12 g carbs</string>
+    <string name="carb_unit_none">off</string>
+    <string name="carb_unit_ke">ke</string>
+    <string name="carb_unit_be">be</string>
+    <string name="settings_data">data</string>
+    <string name="settings_export">export</string>
+    <string name="settings_export_summary">back up saved calculations as a json file</string>
+    <string name="settings_import">import</string>
+    <string name="settings_import_summary">load calculations from a json file</string>
+    <string name="settings_version">version %1$s</string>
+
+    <!-- settings: export and import -->
+    <plurals name="export_done">
+        <item quantity="one">%1$d calculation exported</item>
+        <item quantity="other">%1$d calculations exported</item>
+    </plurals>
+    <string name="export_failed">export failed</string>
+    <string name="import_dialog_title">import</string>
+    <plurals name="import_dialog_text">
+        <item quantity="one">the file holds %1$d calculation. merge keeps yours and skips duplicates, replace deletes them.</item>
+        <item quantity="other">the file holds %1$d calculations. merge keeps yours and skips duplicates, replace deletes them.</item>
+    </plurals>
+    <string name="import_merge">merge</string>
+    <string name="import_replace">replace</string>
+    <string name="import_done" tools:ignore="PluralsCandidate">%1$d imported, %2$d skipped</string>
+    <string name="import_error_unreadable">the file could not be read</string>
+    <string name="import_error_not_json">this is not a json file</string>
+    <string name="import_error_not_a_backup">this is not an export from kh rechner</string>
+    <string name="import_error_newer_version">the file comes from a newer app version (format %1$d). please update kh rechner.</string>
+    <string name="import_error_unknown_version">unknown file format (format %1$d)</string>
+    <string name="import_error_invalid_content">the file holds invalid entries and was not imported</string>
+</resources>
