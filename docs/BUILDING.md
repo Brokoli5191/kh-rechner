@@ -56,8 +56,9 @@ reading it, limited to EAN and UPC. `CalculatorViewModel.scanBarcode` tries Goog
 and opens the built-in one when Google's reports that it cannot run. Only the built-in scanner
 asks for the camera permission.
 
-The about page says which scanner is in use. If Google's module could not be loaded, it quotes the
-status Play services gave and the Play services version. A bug report should include that line.
+The about page says which scanner is in use. If Google's module could not be loaded, it says why
+in one sentence. What Play services answered word for word is in logcat under the tag
+`GmsBarcodeScanner`.
 
 `BarcodeDecoder` holds the ZXing part and is plain JVM code. Its tests draw barcodes with ZXing's
 writer and feed them in as camera frames, upright and turned by a quarter. The camera itself is

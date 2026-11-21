@@ -355,16 +355,15 @@ class AppFlowTest {
     @Test
     fun `the about section says which scanner is in use and why`() {
         app.scanner.installed = false
-        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.Rejected("8 INTERNAL_ERROR")))
+        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.ServicesError(8)))
         compose.onNodeWithText("einstellungen").performClick()
         compose.onNodeWithText("barcode-scanner").performScrollTo()
         awaitText("die app scannt selbst. der google-scanner ist noch nicht geladen.")
 
         compose.onNodeWithText("laden").performClick()
-        awaitText(
-            "die app scannt selbst. google play-dienste lehnen es ab, den google-scanner zu laden (8 INTERNAL_ERROR). " +
-                "play-dienste 25.44.33.",
-        )
+        // One sentence: that it failed and why. No status text, no version, no stack trace.
+        awaitText("die app scannt selbst. der google-scanner lässt sich nicht laden: fehler 8 in den google play-diensten.")
+        compose.onNode(hasText("INTERNAL_ERROR", substring = true)).assertDoesNotExist()
 
         app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.MeteredNetwork))
         compose.onNodeWithText("nochmal").performClick()

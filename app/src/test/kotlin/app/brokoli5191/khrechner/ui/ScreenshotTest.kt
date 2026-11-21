@@ -212,13 +212,13 @@ class ScreenshotTest {
     @Test
     fun aboutWhenGoogleScannerCannotBeLoaded() {
         app.scanner.installed = false
-        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.Rejected("8 INTERNAL_ERROR")))
+        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.ServicesError(8)))
         launch()
         compose.onNodeWithText("einstellungen").performClick()
         compose.onNodeWithText("barcode-scanner").performScrollTo()
         awaitText("noch nicht geladen")
         compose.onNodeWithText("laden").performClick()
-        awaitText("8 INTERNAL_ERROR")
+        awaitText("fehler 8")
         compose.onNode(hasText("kein medizinprodukt", substring = true)).performScrollTo()
         capture("settings-about-fallback")
     }

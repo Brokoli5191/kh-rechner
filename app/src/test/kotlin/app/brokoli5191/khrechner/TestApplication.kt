@@ -58,8 +58,6 @@ class FakeScanner : BarcodeScanner {
 
     override val isSupported: Boolean get() = supported
 
-    override val servicesVersion: String = "25.44.33"
-
     override suspend fun availability(): ScannerAvailability =
         if (installed) ScannerAvailability.READY else ScannerAvailability.NOT_INSTALLED
 

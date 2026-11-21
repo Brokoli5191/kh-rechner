@@ -32,8 +32,6 @@ class ScannerController(
 
     val isSupported: Boolean get() = scanner.isSupported
 
-    val servicesVersion: String? get() = scanner.servicesVersion
-
     private val _status = MutableStateFlow(if (scanner.isSupported) ScannerStatus.Checking else ScannerStatus.Unsupported)
     val status: StateFlow<ScannerStatus> = _status.asStateFlow()
 
