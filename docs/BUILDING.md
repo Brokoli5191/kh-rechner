@@ -42,9 +42,13 @@ One module, `:app`, package `app.brokoli5191.khrechner`.
 
 ## Releases
 
-Pushing a tag such as `v1.2.3` runs `.github/workflows/release.yml`. It builds a signed APK with
-version name `1.2.3` and version code `10203`, and attaches it to a GitHub Release with generated
-notes.
+A release is a signed APK attached to a GitHub Release with generated notes. Version `1.2.3`
+becomes version code `10203`. `.github/workflows/release.yml` builds it, and there are two ways to
+start it:
+
+- On GitHub: Actions → Release → Run workflow, on `main`, with the version number. The run creates
+  the tag `v1.2.3` itself and refuses a version whose tag already exists.
+- From a clone, by pushing the tag:
 
 ```sh
 git tag v1.2.3
