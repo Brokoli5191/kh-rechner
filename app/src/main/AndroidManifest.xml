@@ -4,12 +4,24 @@
     <!-- Only used for the Open Food Facts lookup after a barcode scan. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+        Only for the scanner built into the app, which takes over where Google's scanner cannot
+        run. It is asked for the first time that scanner opens; frames are read on the device.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+
     <queries>
         <!-- Needed to see whether AAPS is installed and to open it (see AndroidAapsHandoff). -->
         <package android:name="info.nightscout.androidaps" />
 
         <!--
-            The code scanner library looks its camera screen up inside Google Play services before
+            Google's code scanner looks its camera screen up inside Google Play services before
             every scan and reports "module not ready" if it cannot see it. Play services is visible
             to all apps on stock devices; these entries make sure of it everywhere else.
         -->
@@ -32,9 +44,9 @@
         android:theme="@style/Theme.KhRechner.Splash">
 
         <!--
-            Lets Play Store installs fetch the scanner module at install time. The APK from GitHub
-            Releases never goes through that path, so KhRechnerApplication requests the module
-            explicitly via ModuleInstallClient as well.
+            Lets Play Store installs fetch Google's scanner module at install time. The APK from
+            GitHub Releases never goes through that path, so KhRechnerApplication requests the
+            module explicitly via ModuleInstallClient as well.
         -->
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"

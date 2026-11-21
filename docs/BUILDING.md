@@ -20,7 +20,7 @@ The Gradle wrapper downloads Gradle and all libraries.
 ```
 
 The UI tests start the real app under Robolectric and click through it, so no emulator is needed.
-The scanner, the network and AAPS are replaced by fakes in `TestApplication`.
+Both scanners, the network and AAPS are replaced by fakes in `TestApplication`.
 
 To re-render the pictures in `docs/screenshots`:
 
@@ -35,7 +35,7 @@ One module, `:app`, package `app.brokoli5191.khrechner`.
 | Package | Contents |
 |---|---|
 | `domain` | The calculation, pure Kotlin. It uses exact fractions, which is how the app knows whether a displayed value was rounded. |
-| `data` | DataStore with kotlinx.serialization, export and import, the Open Food Facts client, the barcode scanner and the AAPS hand-off. |
+| `data` | DataStore with kotlinx.serialization, export and import, the Open Food Facts client, barcode scanning and the AAPS hand-off. |
 | `ui` | Compose, one package per screen, plus theme and shared components. |
 
 `AppContainer` wires these together by hand.
@@ -43,6 +43,25 @@ One module, `:app`, package `app.brokoli5191.khrechner`.
 The list behind "verwendete bibliotheken" is not maintained by hand. The AboutLibraries Gradle
 plugin writes every dependency with its licence to `res/raw/aboutlibraries.json` during the build,
 and `LibraryCatalog` reads that file.
+
+## Barcode scanning
+
+There are two scanners. `GmsBarcodeScanner` is Google's code scanner. Its camera screen runs
+inside Google Play services, so it needs no camera permission, but Play services has to download
+it as a module first. That download can fail. On one stock phone Play services answered the
+request with status 8 (INTERNAL_ERROR) and the module never arrived.
+
+So the app also has a scanner of its own in `ui/scanner`: CameraX for the picture and ZXing for
+reading it, limited to EAN and UPC. `CalculatorViewModel.scanBarcode` tries Google's scanner first
+and opens the built-in one when Google's reports that it cannot run. Only the built-in scanner
+asks for the camera permission.
+
+The about page says which scanner is in use. If Google's module could not be loaded, it quotes the
+status Play services gave and the Play services version. A bug report should include that line.
+
+`BarcodeDecoder` holds the ZXing part and is plain JVM code. Its tests draw barcodes with ZXing's
+writer and feed them in as camera frames, upright and turned by a quarter. The camera itself is
+not covered by any test here, because there is none on the JVM.
 
 ## Releases
 

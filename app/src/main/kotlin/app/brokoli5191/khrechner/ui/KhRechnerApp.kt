@@ -13,6 +13,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -44,6 +45,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
@@ -55,6 +57,8 @@ import app.brokoli5191.khrechner.ui.calculator.CalculatorViewModel
 import app.brokoli5191.khrechner.ui.components.LocalDecimalSeparator
 import app.brokoli5191.khrechner.ui.saved.SavedScreen
 import app.brokoli5191.khrechner.ui.saved.SavedViewModel
+import app.brokoli5191.khrechner.ui.scanner.CameraScanner
+import app.brokoli5191.khrechner.ui.scanner.ScannerOverlay
 import app.brokoli5191.khrechner.ui.settings.LibrariesScreen
 import app.brokoli5191.khrechner.ui.settings.SettingsScreen
 import app.brokoli5191.khrechner.ui.settings.SettingsViewModel
@@ -132,79 +136,95 @@ fun KhRechnerApp(container: AppContainer, settings: Settings) {
     }
 
     CompositionLocalProvider(LocalDecimalSeparator provides decimalSeparator) {
-        Scaffold(
-            bottomBar = {
-                ShortNavigationBar {
-                    Destination.entries.forEach { destination ->
-                        val selected = destination == current
-                        // The icon of the chosen tab pops: it grows past its size and settles.
-                        val iconScale by animateFloatAsState(if (selected) 1.15f else 1f, motion.bouncy(), label = "navIcon")
-                        ShortNavigationBarItem(
-                            selected = selected,
-                            onClick = { switchTo(destination) },
-                            icon = {
-                                Icon(
-                                    painter = painterResource(if (selected) destination.selectedIcon else destination.icon),
-                                    contentDescription = null,
-                                    modifier = Modifier.graphicsLayer {
-                                        scaleX = iconScale
-                                        scaleY = iconScale
-                                    },
-                                )
-                            },
-                            label = { Text(stringResource(destination.label)) },
-                        )
-                    }
-                }
-            },
-            // Each screen brings its own top bar and handles the top inset there.
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        ) { padding ->
-            NavDisplay(
-                backStack = backStack,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .consumeWindowInsets(padding)
-                    // Lifts the content, including the docked result, above the keyboard.
-                    .imePadding()
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
-                onBack = { backStack.removeLastOrNull() },
-                transitionSpec = { tabTransition(motion, direction) },
-                // Back always leads to the calculator, the first tab.
-                popTransitionSpec = { tabTransition(motion, direction = -1) },
-                predictivePopTransitionSpec = { tabTransition(motion, direction = -1) },
-                entryProvider = { screen ->
-                    NavEntry(screen) {
-                        when (screen) {
-                            Screen.CALCULATOR -> CalculatorScreen(
-                                viewModel = calculatorViewModel,
-                                carbUnit = currentSettings.carbUnit,
-                                canScan = container.scanner.isSupported,
-                                aaps = container.aaps,
-                            )
-                            Screen.SAVED -> SavedScreen(
-                                viewModel = savedViewModel,
-                                onOpen = { entry ->
-                                    calculatorViewModel.load(entry)
-                                    switchTo(Destination.CALCULATOR)
+        Box {
+            Scaffold(
+                bottomBar = {
+                    ShortNavigationBar {
+                        Destination.entries.forEach { destination ->
+                            val selected = destination == current
+                            // The icon of the chosen tab pops: it grows past its size and settles.
+                            val iconScale by animateFloatAsState(if (selected) 1.15f else 1f, motion.bouncy(), label = "navIcon")
+                            ShortNavigationBarItem(
+                                selected = selected,
+                                onClick = { switchTo(destination) },
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(if (selected) destination.selectedIcon else destination.icon),
+                                        contentDescription = null,
+                                        modifier = Modifier.graphicsLayer {
+                                            scaleX = iconScale
+                                            scaleY = iconScale
+                                        },
+                                    )
                                 },
-                            )
-                            Screen.SETTINGS -> SettingsScreen(
-                                viewModel = settingsViewModel,
-                                settings = currentSettings,
-                                onOpenLibraries = { open(Screen.LIBRARIES) },
-                            )
-                            Screen.LIBRARIES -> LibrariesScreen(
-                                viewModel = settingsViewModel,
-                                onBack = { backStack.removeLastOrNull() },
+                                label = { Text(stringResource(destination.label)) },
                             )
                         }
                     }
                 },
-            )
+                // Each screen brings its own top bar and handles the top inset there.
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            ) { padding ->
+                NavDisplay(
+                    backStack = backStack,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .consumeWindowInsets(padding)
+                        // Lifts the content, including the docked result, above the keyboard.
+                        .imePadding()
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)),
+                    onBack = { backStack.removeLastOrNull() },
+                    transitionSpec = { tabTransition(motion, direction) },
+                    // Back always leads to the calculator, the first tab.
+                    popTransitionSpec = { tabTransition(motion, direction = -1) },
+                    predictivePopTransitionSpec = { tabTransition(motion, direction = -1) },
+                    entryProvider = { screen ->
+                        NavEntry(screen) {
+                            when (screen) {
+                                Screen.CALCULATOR -> CalculatorScreen(
+                                    viewModel = calculatorViewModel,
+                                    carbUnit = currentSettings.carbUnit,
+                                    canScan = container.camera.isAvailable,
+                                    aaps = container.aaps,
+                                )
+                                Screen.SAVED -> SavedScreen(
+                                    viewModel = savedViewModel,
+                                    onOpen = { entry ->
+                                        calculatorViewModel.load(entry)
+                                        switchTo(Destination.CALCULATOR)
+                                    },
+                                )
+                                Screen.SETTINGS -> SettingsScreen(
+                                    viewModel = settingsViewModel,
+                                    settings = currentSettings,
+                                    onOpenLibraries = { open(Screen.LIBRARIES) },
+                                )
+                                Screen.LIBRARIES -> LibrariesScreen(
+                                    viewModel = settingsViewModel,
+                                    onBack = { backStack.removeLastOrNull() },
+                                )
+                            }
+                        }
+                    },
+                )
+            }
+            CameraScannerOverlay(calculatorViewModel, container.camera)
         }
     }
+}
+
+/** The built-in scanner covers the whole app, navigation bar included, so it lives outside the scaffold. */
+@Composable
+private fun CameraScannerOverlay(viewModel: CalculatorViewModel, camera: CameraScanner) {
+    // Collected here rather than in the caller, which would otherwise recompose on every keystroke.
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    ScannerOverlay(
+        visible = state.cameraScannerOpen,
+        camera = camera,
+        onCode = viewModel::onCameraScan,
+        onClose = viewModel::closeCameraScanner,
+    )
 }
 
 /**

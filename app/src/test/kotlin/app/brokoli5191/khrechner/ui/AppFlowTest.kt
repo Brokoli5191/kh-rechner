@@ -1,5 +1,10 @@
 package app.brokoli5191.khrechner.ui
 
+import android.Manifest
+import android.app.Application
+import android.content.pm.PackageManager
+import android.provider.Settings as SystemSettings
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsOff
@@ -10,13 +15,14 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isOn
-import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -25,17 +31,18 @@ import app.brokoli5191.khrechner.TestApplication
 import app.brokoli5191.khrechner.data.InstallFailure
 import app.brokoli5191.khrechner.data.InstallUpdate
 import app.brokoli5191.khrechner.data.RemoteProduct
-import app.brokoli5191.khrechner.data.ScanFailure
 import app.brokoli5191.khrechner.data.ScanResult
 import app.brokoli5191.khrechner.data.Settings
 import app.brokoli5191.khrechner.data.ThemeMode
 import app.brokoli5191.khrechner.ui.theme.KhRechnerTheme
-import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
@@ -47,7 +54,7 @@ import org.robolectric.annotation.Config
 class AppFlowTest {
 
     @get:Rule
-    val compose = createComposeRule()
+    val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val app: TestApplication get() = ApplicationProvider.getApplicationContext()
 
@@ -67,6 +74,15 @@ class AppFlowTest {
 
     private fun awaitText(text: String) {
         compose.waitUntil(5_000) { compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    private fun grantCamera() = shadowOf(app as Application).grantPermissions(Manifest.permission.CAMERA)
+
+    private fun scan() = compose.onNodeWithContentDescription("barcode scannen").performClick()
+
+    /** Waits until the built-in scanner shows its picture, or until it is gone again. */
+    private fun awaitCamera(open: Boolean = true) {
+        compose.waitUntil(5_000) { app.camera.isOpen == open }
     }
 
     private fun awaitResult(description: String) {
@@ -207,18 +223,9 @@ class AppFlowTest {
         compose.onNodeWithContentDescription("barcode scannen").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("keine verbindung", substring = true)).fetchSemanticsNodes().isNotEmpty() }
 
-        // A failure the app has no words for is shown with the scanner's own error code.
-        app.scanner.next = ScanResult.Failed(ScanFailure.OTHER, 13)
-        compose.onNodeWithContentDescription("barcode scannen").performClick()
-        awaitText("scannen fehlgeschlagen (fehler 13).")
-
-        app.scanner.next = ScanResult.Failed(ScanFailure.CAMERA_PERMISSION, 202)
-        compose.onNodeWithContentDescription("barcode scannen").performClick()
-        awaitText("google play-dienste brauchen die kamera-berechtigung, um zu scannen.")
-
         // The calculator never waits on the network: typing still works and clears the message.
         field("kh pro 100 g").performTextInput("12")
-        compose.onNode(hasText("kamera-berechtigung", substring = true)).assertDoesNotExist()
+        compose.onNode(hasText("keine verbindung", substring = true)).assertDoesNotExist()
         field("gegessen in g").performScrollTo().performTextInput("50")
         awaitResult("6 gramm kohlenhydrate")
     }
@@ -241,54 +248,133 @@ class AppFlowTest {
     }
 
     @Test
-    fun `a missing scanner module is downloaded with visible progress, then the scan runs`() {
-        val gate = CompletableDeferred<Unit>()
+    fun `where google's scanner cannot run, the built-in one reads the code`() {
+        grantCamera()
         app.scanner.installed = false
-        app.scanner.installUpdates = listOf(InstallUpdate.Progress(null), InstallUpdate.Progress(40), InstallUpdate.Done)
-        app.scanner.installGate = gate
-        app.scanner.next = ScanResult.Code("3017624010701")
         app.productSource.answer = RemoteProduct.Found("Nutella", "57.5", "400")
 
-        compose.onNodeWithContentDescription("barcode scannen").performClick()
-        awaitText("scanner wird geladen … 40 %")
-        // The field stays usable while the download runs.
-        field("gesamtgewicht").performTextInput("250")
+        scan()
+        awaitCamera()
+        awaitText("barcode in den rahmen halten")
+        compose.runOnIdle { app.camera.see("3017624010701") }
 
-        gate.complete(Unit)
+        // What was read is shown for a moment, then the scanner gets out of the way.
+        awaitText("3017624010701")
         awaitText("Nutella")
+        awaitCamera(open = false)
         field("kh pro 100 g").assertTextContains("57,5")
-        // One attempt that found the module missing, one after the download.
-        assertEquals(2, app.scanner.scans)
+        assertEquals(listOf("3017624010701"), app.productSource.requested)
     }
 
     @Test
-    fun `a failed scanner download says why`() {
+    fun `google's scanner is fetched on the side and used from then on`() {
+        grantCamera()
         app.scanner.installed = false
-        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.METERED_NETWORK, 46004))
-        compose.onNodeWithContentDescription("barcode scannen").performClick()
-        awaitText("der scanner wird nur über wlan geladen.")
+        scan()
+        awaitCamera()
+        compose.onNodeWithContentDescription("scanner schließen").performClick()
+        awaitCamera(open = false)
+        assertEquals(2, app.scanner.installs) // once at launch, once because the scan found it missing
 
-        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.OTHER, 46000))
-        compose.onNodeWithContentDescription("barcode scannen").performClick()
-        awaitText("der scanner konnte nicht geladen werden (fehler 46000).")
-        assertEquals(emptyList<String>(), app.productSource.requested)
+        // The download has finished in the meantime.
+        app.scanner.next = ScanResult.Code("3017624010701")
+        app.productSource.answer = RemoteProduct.Found("Nutella", "57.5", "400")
+        scan()
+        awaitText("Nutella")
+        assertFalse(app.camera.isOpen)
     }
 
     @Test
-    fun `the about section shows the scanner state and offers the download`() {
+    fun `without play services the built-in scanner opens straight away`() {
+        grantCamera()
+        app.scanner.supported = false
+        scan()
+        awaitCamera()
+        assertEquals(0, app.scanner.scans)
+
+        // Back closes the scanner, not the app.
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        awaitCamera(open = false)
+        field("kh pro 100 g").performTextInput("12")
+        field("kh pro 100 g").assertTextContains("12")
+    }
+
+    @Test
+    fun `the built-in scanner asks for the camera and says what it needs when refused`() {
         app.scanner.installed = false
-        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.NO_STORAGE, 46003))
+        scan()
+        compose.waitForIdle()
+        val request = shadowOf(compose.activity).lastRequestedPermission
+        assertEquals(listOf(Manifest.permission.CAMERA), request.requestedPermissions.toList())
+        assertFalse(app.camera.isOpen)
+
+        // Deprecated for apps, but it is how the system hands the answer to the activity.
+        @Suppress("DEPRECATION")
+        compose.runOnIdle {
+            compose.activity.onRequestPermissionsResult(
+                request.requestCode,
+                arrayOf(Manifest.permission.CAMERA),
+                intArrayOf(PackageManager.PERMISSION_DENIED),
+            )
+        }
+        awaitText("ohne kamera kein scan")
+        assertFalse(app.camera.isOpen)
+
+        // Android no longer shows its dialog here, so the button leads to the app's settings page.
+        compose.onNodeWithText("kamera erlauben").performClick()
+        compose.waitForIdle()
+        assertEquals(SystemSettings.ACTION_APPLICATION_DETAILS_SETTINGS, shadowOf(app as Application).nextStartedActivity.action)
+
+        // Granted over there; coming back is enough.
+        grantCamera()
+        compose.activityRule.scenario.moveToState(Lifecycle.State.STARTED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.waitForIdle()
+        awaitCamera()
+        awaitText("barcode in den rahmen halten")
+    }
+
+    @Test
+    fun `the light can be switched, and a camera that does not open says so`() {
+        grantCamera()
+        app.scanner.installed = false
+        scan()
+        awaitCamera()
+        compose.onNodeWithContentDescription("licht einschalten").performClick()
+        compose.onNodeWithContentDescription("licht ausschalten").assertExists()
+        compose.runOnIdle { assertTrue(app.camera.torch) }
+
+        compose.runOnIdle { app.camera.fail(IllegalStateException("camera in use")) }
+        awaitText("die kamera lässt sich nicht öffnen")
+        compose.onNodeWithText("IllegalStateException: camera in use", substring = true).assertExists()
+        compose.onNodeWithText("scanner schließen").performClick()
+        awaitCamera(open = false)
+        compose.onNodeWithText("die kamera lässt sich nicht öffnen").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the about section says which scanner is in use and why`() {
+        app.scanner.installed = false
+        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.Rejected("8 INTERNAL_ERROR")))
         compose.onNodeWithText("einstellungen").performClick()
         compose.onNodeWithText("barcode-scanner").performScrollTo()
-        awaitText("noch nicht geladen")
+        awaitText("die app scannt selbst. der google-scanner ist noch nicht geladen.")
 
         compose.onNodeWithText("laden").performClick()
-        awaitText("zu wenig speicher, um den scanner zu laden.")
+        awaitText(
+            "die app scannt selbst. google play-dienste lehnen es ab, den google-scanner zu laden (8 INTERNAL_ERROR). " +
+                "play-dienste 25.44.33.",
+        )
+
+        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.MeteredNetwork))
+        compose.onNodeWithText("nochmal").performClick()
+        awaitText("der google-scanner wird nur über wlan geladen.")
 
         app.scanner.installUpdates = listOf(InstallUpdate.Done)
         compose.onNodeWithText("nochmal").performClick()
-        awaitText("bereit")
+        awaitText("google-scanner bereit")
         compose.onNodeWithText("nochmal").assertDoesNotExist()
+        compose.onNode(hasText("die app scannt selbst", substring = true)).assertDoesNotExist()
     }
 
     @Test

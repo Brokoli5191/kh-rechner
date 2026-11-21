@@ -22,6 +22,8 @@ import app.brokoli5191.khrechner.data.SettingsRepository
 import app.brokoli5191.khrechner.data.jsonDataStore
 import app.brokoli5191.khrechner.ui.calculator.CalculatorViewModel
 import app.brokoli5191.khrechner.ui.saved.SavedViewModel
+import app.brokoli5191.khrechner.ui.scanner.CameraScanner
+import app.brokoli5191.khrechner.ui.scanner.CameraXScanner
 import app.brokoli5191.khrechner.ui.settings.SettingsViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,13 +33,14 @@ import kotlinx.coroutines.SupervisorJob
  * Manual dependency wiring. One instance lives in [KhRechnerApplication].
  *
  * The parameters with defaults are the app's only doors to the outside world (Google Play
- * services, the network, AAPS); tests pass fakes for them.
+ * services, the network, AAPS, the camera); tests pass fakes for them.
  */
 class AppContainer(
     context: Context,
     barcodeScanner: BarcodeScanner = GmsBarcodeScanner(context.applicationContext),
     productSource: ProductSource = OpenFoodFactsClient(USER_AGENT),
     val aaps: AapsHandoff = AndroidAapsHandoff(context.applicationContext),
+    val camera: CameraScanner = CameraXScanner(context.applicationContext),
 ) {
 
     private val appContext = context.applicationContext
@@ -57,7 +60,7 @@ class AppContainer(
     val viewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         initializer { CalculatorViewModel(createSavedStateHandle(), entries, products, scanner) }
         initializer { SavedViewModel(entries) }
-        initializer { SettingsViewModel(settings, backup, scanner, libraries) }
+        initializer { SettingsViewModel(settings, backup, scanner, libraries, cameraAvailable = camera.isAvailable) }
     }
 
     private companion object {

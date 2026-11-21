@@ -53,7 +53,6 @@ import app.brokoli5191.khrechner.data.AppData
 import app.brokoli5191.khrechner.data.BackupCodec
 import app.brokoli5191.khrechner.data.ImportError
 import app.brokoli5191.khrechner.data.ImportMode
-import app.brokoli5191.khrechner.data.ScannerStatus
 import app.brokoli5191.khrechner.data.Settings
 import app.brokoli5191.khrechner.data.ThemeMode
 import app.brokoli5191.khrechner.domain.CarbUnit
@@ -74,7 +73,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings, onOpenLibra
     val libraries by viewModel.libraries.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
 
-    // The scanner module may have arrived (or gone) while the app was in the background.
+    // Google's scanner module may have arrived (or gone) while the app was in the background.
     LifecycleResumeEffect(viewModel) {
         viewModel.refreshScanner()
         onPauseOrDispose { }
@@ -114,7 +113,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings, onOpenLibra
 
     SettingsContent(
         settings = settings,
-        scannerStatus = scannerStatus,
+        scanner = ScannerInfo(scannerStatus, viewModel.cameraAvailable, viewModel.servicesVersion),
         libraryCount = libraries.size,
         snackbar = snackbar,
         onInstallScanner = viewModel::installScanner,
@@ -141,7 +140,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings, onOpenLibra
 @Composable
 fun SettingsContent(
     settings: Settings,
-    scannerStatus: ScannerStatus,
+    scanner: ScannerInfo,
     libraryCount: Int,
     snackbar: SnackbarHostState,
     onInstallScanner: () -> Unit,
@@ -258,7 +257,7 @@ fun SettingsContent(
             }
 
             AboutSection(
-                scannerStatus = scannerStatus,
+                scanner = scanner,
                 libraryCount = libraryCount,
                 firstIndex = 4,
                 onInstallScanner = onInstallScanner,

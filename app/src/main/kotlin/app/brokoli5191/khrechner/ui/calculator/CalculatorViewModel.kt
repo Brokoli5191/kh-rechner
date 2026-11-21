@@ -13,15 +13,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.brokoli5191.khrechner.data.EntryRepository
-import app.brokoli5191.khrechner.data.InstallFailure
 import app.brokoli5191.khrechner.data.OpenFoodFactsClient
 import app.brokoli5191.khrechner.data.ProductLookup
 import app.brokoli5191.khrechner.data.ProductRepository
 import app.brokoli5191.khrechner.data.SavedEntry
-import app.brokoli5191.khrechner.data.ScanFailure
 import app.brokoli5191.khrechner.data.ScanResult
 import app.brokoli5191.khrechner.data.ScannerController
-import app.brokoli5191.khrechner.data.ScannerStatus
 import app.brokoli5191.khrechner.domain.CalcField
 import app.brokoli5191.khrechner.domain.CalcInput
 import app.brokoli5191.khrechner.domain.CalcResult
@@ -35,11 +32,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 
 /** An editable number field: its text plus the filter that sanitises what the user types. */
 class NumberFieldModel internal constructor(
@@ -68,14 +62,6 @@ sealed interface LookupStatus {
     data object NotFound : LookupStatus
     data class NoCarbs(val name: String) : LookupStatus
     data object Offline : LookupStatus
-
-    /** The scanner module is being downloaded; [percent] is null until Play services reports progress. */
-    data class ScannerInstalling(val percent: Int?) : LookupStatus
-
-    /** The download is taking longer than the user should be made to wait for. */
-    data object ScannerStillInstalling : LookupStatus
-    data class ScannerInstallFailed(val reason: InstallFailure, val code: Int) : LookupStatus
-    data class ScanFailed(val reason: ScanFailure, val code: Int) : LookupStatus
 }
 
 /** Everything needed to put the calculator back the way it was (undo, saved entries). */
@@ -90,6 +76,8 @@ data class CalculatorUiState(
     val wholeGrams: Int? = null,
     val product: ProductInfo? = null,
     val lookup: LookupStatus = LookupStatus.Idle,
+    /** The scanner built into the app is open, because Google's could not be. */
+    val cameraScannerOpen: Boolean = false,
     val hasInput: Boolean = false,
 ) {
     val canSave: Boolean get() = result.carbsEaten != null
@@ -226,42 +214,26 @@ class CalculatorViewModel(
     // --- barcode lookup ---------------------------------------------------------------------
 
     /**
-     * Opens the scanner and looks the product up. If the scanner module is missing, it is
-     * downloaded first with progress shown under the field, and the scanner opens when it arrives.
+     * Scans a barcode and looks the product up. Google's scanner is tried first; where it cannot
+     * run, the one built into the app opens instead and reports through [onCameraScan].
      *
-     * @param activityContext the activity to show the scanner on; not kept.
+     * @param activityContext the activity to show Google's scanner on; not kept.
      */
     suspend fun scanBarcode(activityContext: Context) {
-        var result = scanner.scan(activityContext)
-        if (result is ScanResult.Failed && result.reason == ScanFailure.MODULE_NOT_READY) {
-            scanner.install()
-            val settled = withTimeoutOrNull(INSTALL_WAIT_MILLIS) {
-                scanner.status
-                    .onEach { if (it is ScannerStatus.Installing) setLookup(LookupStatus.ScannerInstalling(it.percent)) }
-                    .first { it !is ScannerStatus.Installing }
-            }
-            when (settled) {
-                ScannerStatus.Ready -> result = scanner.scan(activityContext)
-                is ScannerStatus.InstallFailed -> {
-                    setLookup(LookupStatus.ScannerInstallFailed(settled.reason, settled.code))
-                    return
-                }
-                else -> {
-                    // Still downloading (it carries on in the background) or in a state nobody expected.
-                    setLookup(LookupStatus.ScannerStillInstalling)
-                    return
-                }
-            }
-        }
-        when (result) {
-            ScanResult.Cancelled -> setLookup(LookupStatus.Idle)
-            is ScanResult.Failed -> setLookup(LookupStatus.ScanFailed(result.reason, result.code))
+        when (val result = scanner.scan(activityContext)) {
+            ScanResult.Cancelled -> Unit
             is ScanResult.Code -> lookUp(result.barcode)
+            is ScanResult.Unavailable -> _uiState.update { it.copy(cameraScannerOpen = true) }
         }
     }
 
-    private fun setLookup(status: LookupStatus) {
-        _uiState.update { it.copy(lookup = status) }
+    fun onCameraScan(barcode: String) {
+        closeCameraScanner()
+        lookUp(barcode)
+    }
+
+    fun closeCameraScanner() {
+        _uiState.update { it.copy(cameraScannerOpen = false) }
     }
 
     private fun lookUp(barcode: String) {
@@ -303,11 +275,8 @@ class CalculatorViewModel(
 
     fun clearProduct() {
         setProduct(null)
-        _uiState.update { state ->
-            // Typing must not hide a lookup or a download that is still under way.
-            val busy = state.lookup == LookupStatus.Loading || state.lookup is LookupStatus.ScannerInstalling
-            if (busy) state else state.copy(lookup = LookupStatus.Idle)
-        }
+        // Typing must not hide a lookup that is still under way.
+        _uiState.update { state -> if (state.lookup == LookupStatus.Loading) state else state.copy(lookup = LookupStatus.Idle) }
     }
 
     private fun setProduct(product: ProductInfo?) {
@@ -366,9 +335,6 @@ class CalculatorViewModel(
     }
 
     private companion object {
-        /** How long a tap on "scan" waits for the scanner module before telling the user to come back. */
-        const val INSTALL_WAIT_MILLIS = 45_000L
-
         /** Up to 99999.99; enough for any food and short enough for the field. */
         val DECIMAL = Regex("""\d{0,5}(\.\d{0,2})?""")
         val WHOLE = Regex("""\d{0,4}""")

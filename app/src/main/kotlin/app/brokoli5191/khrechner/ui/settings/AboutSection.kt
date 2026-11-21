@@ -31,8 +31,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.brokoli5191.khrechner.BuildConfig
 import app.brokoli5191.khrechner.R
+import app.brokoli5191.khrechner.data.InstallFailure
 import app.brokoli5191.khrechner.data.ScannerStatus
-import app.brokoli5191.khrechner.ui.components.installFailureMessage
 import app.brokoli5191.khrechner.ui.theme.popIn
 
 /** Where the about section points to. */
@@ -44,6 +44,15 @@ internal object Links {
 }
 
 /**
+ * What the about page says about scanning.
+ *
+ * @param status state of Google's scanner; while it is not ready the app scans with its own.
+ * @param cameraAvailable false on a device without a camera, where nothing can scan.
+ * @param servicesVersion version of Google Play services, quoted next to a failed download.
+ */
+data class ScannerInfo(val status: ScannerStatus, val cameraAvailable: Boolean = true, val servicesVersion: String? = null)
+
+/**
  * "über": what the app is, the state of the barcode scanner, and where its code, its building
  * blocks and its data come from.
  *
@@ -51,7 +60,7 @@ internal object Links {
  */
 @Composable
 internal fun AboutSection(
-    scannerStatus: ScannerStatus,
+    scanner: ScannerInfo,
     libraryCount: Int,
     firstIndex: Int,
     onInstallScanner: () -> Unit,
@@ -63,7 +72,7 @@ internal fun AboutSection(
 
     SettingsGroup(index = firstIndex + 1, modifier = Modifier.padding(top = 12.dp)) {
         val rows = 6
-        ScannerRow(scannerStatus, index = 0, count = rows, onInstall = onInstallScanner)
+        ScannerRow(scanner, index = 0, count = rows, onInstall = onInstallScanner)
         LinkRow(
             icon = R.drawable.ic_code,
             title = stringResource(R.string.about_source),
@@ -171,47 +180,68 @@ private fun AboutHero(modifier: Modifier = Modifier) {
     }
 }
 
-/** Scanner state in words, with the one action that helps in that state. */
+/**
+ * Which scanner is in use, in words. Google's is preferred because it needs no camera permission;
+ * while it is missing the row says so, why, and offers the one action that may help.
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ScannerRow(status: ScannerStatus, index: Int, count: Int, onInstall: () -> Unit) {
-    val failed = status is ScannerStatus.InstallFailed
-    val summary = when (status) {
-        ScannerStatus.Unsupported -> stringResource(R.string.scanner_status_unsupported)
-        ScannerStatus.Checking -> stringResource(R.string.scanner_status_checking)
-        ScannerStatus.Ready -> stringResource(R.string.scanner_status_ready)
-        ScannerStatus.NotInstalled -> stringResource(R.string.scanner_status_not_installed)
-        is ScannerStatus.Installing ->
-            if (status.percent == null) {
-                stringResource(R.string.scanner_status_installing)
-            } else {
-                stringResource(R.string.scanner_status_installing_percent, status.percent)
-            }
-        is ScannerStatus.InstallFailed -> installFailureMessage(status.reason, status.code)
+private fun ScannerRow(scanner: ScannerInfo, index: Int, count: Int, onInstall: () -> Unit) {
+    val status = scanner.status
+    val summary = when {
+        !scanner.cameraAvailable -> stringResource(R.string.scanner_status_no_camera)
+        status == ScannerStatus.Ready -> stringResource(R.string.scanner_status_ready)
+        status == ScannerStatus.Checking -> stringResource(R.string.scanner_status_checking)
+        else -> listOfNotNull(
+            stringResource(R.string.scanner_builtin_active),
+            when (status) {
+                ScannerStatus.Unsupported -> stringResource(R.string.scanner_status_unsupported)
+                ScannerStatus.NotInstalled -> stringResource(R.string.scanner_status_not_installed)
+                is ScannerStatus.Installing ->
+                    if (status.percent == null) {
+                        stringResource(R.string.scanner_status_installing)
+                    } else {
+                        stringResource(R.string.scanner_status_installing_percent, status.percent)
+                    }
+                is ScannerStatus.InstallFailed -> status.reason.message()
+            },
+            // Which Play services turned the download down is the first thing a bug report needs.
+            scanner.servicesVersion
+                ?.takeIf { status is ScannerStatus.InstallFailed }
+                ?.let { stringResource(R.string.scanner_services_version, it) },
+        ).joinToString(" ")
     }
     SegmentedListItem(
         shapes = ListItemDefaults.segmentedShapes(index = index, count = count),
         colors = groupColors(),
         leadingContent = { Icon(painterResource(R.drawable.ic_barcode_scanner), contentDescription = null) },
-        supportingContent = {
-            Text(summary, color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
-        },
+        supportingContent = { Text(summary, color = MaterialTheme.colorScheme.onSurfaceVariant) },
         trailingContent = {
-            when (status) {
-                ScannerStatus.Ready ->
-                    Icon(painterResource(R.drawable.ic_check_circle), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                is ScannerStatus.Installing -> LoadingIndicator(Modifier.size(32.dp))
-                ScannerStatus.NotInstalled ->
-                    FilledTonalButton(onClick = onInstall) { Text(stringResource(R.string.action_load)) }
-                is ScannerStatus.InstallFailed ->
-                    FilledTonalButton(onClick = onInstall) { Text(stringResource(R.string.action_retry)) }
-                ScannerStatus.Unsupported ->
+            when {
+                !scanner.cameraAvailable ->
                     Icon(painterResource(R.drawable.ic_error), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                ScannerStatus.Checking -> Unit
+                status == ScannerStatus.Ready ->
+                    Icon(painterResource(R.drawable.ic_check_circle), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                status is ScannerStatus.Installing -> LoadingIndicator(Modifier.size(32.dp))
+                status == ScannerStatus.NotInstalled ->
+                    FilledTonalButton(onClick = onInstall) { Text(stringResource(R.string.action_load)) }
+                status is ScannerStatus.InstallFailed ->
+                    FilledTonalButton(onClick = onInstall) { Text(stringResource(R.string.action_retry)) }
+                else -> Unit
             }
         },
         content = { Text(stringResource(R.string.about_scanner)) },
     )
+}
+
+/** Why Google's scanner did not arrive. The three with a detail quote it as Play services gave it. */
+@Composable
+private fun InstallFailure.message(): String = when (this) {
+    InstallFailure.MeteredNetwork -> stringResource(R.string.scanner_install_failed_metered)
+    InstallFailure.NoStorage -> stringResource(R.string.scanner_install_failed_storage)
+    is InstallFailure.Rejected -> stringResource(R.string.scanner_install_failed_rejected, status)
+    is InstallFailure.DownloadFailed -> stringResource(R.string.scanner_install_failed_download, status)
+    is InstallFailure.NotSent -> stringResource(R.string.scanner_install_failed_not_sent, error)
 }
 
 @Composable
