@@ -15,6 +15,8 @@ import app.brokoli5191.khrechner.data.ScannerStatus
 import app.brokoli5191.khrechner.data.Settings
 import app.brokoli5191.khrechner.data.SettingsRepository
 import app.brokoli5191.khrechner.data.ThemeMode
+import app.brokoli5191.khrechner.data.UpdateController
+import app.brokoli5191.khrechner.data.UpdateStatus
 import app.brokoli5191.khrechner.domain.CarbUnit
 import java.io.IOException
 import kotlinx.coroutines.channels.Channel
@@ -40,12 +42,21 @@ class SettingsViewModel(
     private val settings: SettingsRepository,
     private val backup: BackupRepository,
     private val scanner: ScannerController,
+    private val updates: UpdateController,
     libraries: LibraryCatalog,
     /** False on a device without a camera, where neither scanner can work. */
     val cameraAvailable: Boolean,
 ) : ViewModel() {
 
     val scannerStatus: StateFlow<ScannerStatus> = scanner.status
+
+    val updateStatus: StateFlow<UpdateStatus> = updates.status
+
+    fun checkForUpdate() = updates.checkNow()
+
+    fun installUpdate() = updates.install()
+
+    fun setCheckForUpdates(enabled: Boolean) = update { it.copy(checkForUpdates = enabled) }
 
     /** Read once from the bundled list; empty until then. */
     val libraries: StateFlow<List<LibraryGroup>> = flow { emit(libraries.load()) }

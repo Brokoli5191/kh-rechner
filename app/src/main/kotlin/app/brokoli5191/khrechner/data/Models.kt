@@ -75,4 +75,6 @@ data class Settings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
     val carbUnit: CarbUnit = CarbUnit.NONE,
+    /** Ask GitHub for a newer release when the app is opened, at most once a day. */
+    val checkForUpdates: Boolean = true,
 )

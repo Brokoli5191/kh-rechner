@@ -30,6 +30,8 @@ import app.brokoli5191.khrechner.TestApplication
 import app.brokoli5191.khrechner.data.InstallFailure
 import app.brokoli5191.khrechner.data.InstallUpdate
 import app.brokoli5191.khrechner.data.ProductPieces
+import app.brokoli5191.khrechner.data.ReleaseInfo
+import app.brokoli5191.khrechner.data.ReleaseLookup
 import app.brokoli5191.khrechner.data.RemoteProduct
 import app.brokoli5191.khrechner.data.ScanResult
 import app.brokoli5191.khrechner.data.Settings
@@ -276,6 +278,27 @@ class ScreenshotTest {
         }
         awaitText("ohne kamera kein scan")
         capture("scanner-permission")
+    }
+
+    /** A newer version waiting: the section offers it and the settings tab carries a dot. */
+    @Test
+    fun settingsWithUpdate() {
+        app.releases.answer = ReleaseLookup.Found(
+            ReleaseInfo(
+                version = "9.1.0",
+                apkUrl = "https://github.com/Brokoli5191/kh-rechner/releases/download/v9.1.0/kh-rechner-9.1.0.apk",
+                apkSize = 4_402_561,
+                sha256 = null,
+                pageUrl = "https://github.com/Brokoli5191/kh-rechner/releases/tag/v9.1.0",
+            ),
+        )
+        launch()
+        compose.onNodeWithText("einstellungen").performClick()
+        compose.onNodeWithText("updates").performScrollTo()
+        compose.onNodeWithText("suchen").performScrollTo().performClick()
+        awaitText("version 9.1.0 ist da")
+        compose.onNodeWithText("beim öffnen suchen").performScrollTo()
+        capture("settings-updates")
     }
 
     private companion object {

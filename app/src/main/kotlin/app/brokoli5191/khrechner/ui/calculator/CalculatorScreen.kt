@@ -64,6 +64,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -81,6 +82,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -122,6 +124,7 @@ import app.brokoli5191.khrechner.ui.components.shown
 import app.brokoli5191.khrechner.ui.components.withSeparator
 import app.brokoli5191.khrechner.ui.theme.AppMotion
 import app.brokoli5191.khrechner.ui.theme.rememberAppMotion
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 @Composable
@@ -279,6 +282,7 @@ fun CalculatorContent(
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 12.dp),
         ) {
+            CollapsedBarGap(scrollBehavior.state)
             Popping(visible = state.product != null, motion = motion) {
                 // Keeps showing the last product while the row animates out.
                 val product = rememberLast(state.product)
@@ -406,7 +410,7 @@ fun CalculatorContent(
             }
             GroupMessage(
                 message = errors.firstMessage(CalcField.EATEN_PERCENT, CalcField.EATEN_PIECES, CalcField.EATEN_GRAMS),
-                hint = null,
+                hint = state.moreThanPackageHint(),
                 motion = motion,
             )
         }
@@ -416,6 +420,9 @@ fun CalculatorContent(
 // --- tiles ----------------------------------------------------------------------------------
 
 private val TileGap = 3.dp
+
+/** Space between the folded top bar and the first tiles. */
+private val CollapsedBarGapHeight = 16.dp
 private val TileHeightCompact = 64.dp
 private val TileHeightRoomy = 84.dp
 
@@ -603,6 +610,22 @@ private fun LookupIndicator() {
                 .semantics { contentDescription = description },
         )
     }
+}
+
+/**
+ * Keeps the tiles off the top bar once it has folded to one line. The large title brings its own
+ * space below it, the folded bar none, so the gap grows as the bar folds. Read during layout, so
+ * scrolling does not recompose the screen.
+ */
+@Composable
+private fun CollapsedBarGap(bar: TopAppBarState) {
+    Spacer(
+        Modifier.layout { measurable, constraints ->
+            val height = (CollapsedBarGapHeight.toPx() * bar.collapsedFraction).roundToInt()
+            val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+            layout(placeable.width, height) { placeable.place(0, 0) }
+        },
+    )
 }
 
 /** One line under a group of tiles: the first error in it, or else a neutral [hint]. */
@@ -907,6 +930,18 @@ private fun unitLine(state: CalculatorUiState, unit: CarbUnit): String? {
 }
 
 /**
+ * Points out that more was eaten than the package holds. That is allowed (one and a half packages
+ * scanned once), but it is also what a slipped digit looks like, so it is never silent.
+ */
+@Composable
+private fun CalculatorUiState.moreThanPackageHint(): String? {
+    val percent = result.eatenPercent ?: return null
+    if (percent <= Fraction.HUNDRED) return null
+    val packages = DecimalText.format(percent / Fraction.HUNDRED)
+    return stringResource(R.string.eaten_more_than_package, packages.shown(LocalDecimalSeparator.current))
+}
+
+/**
  * Says that the piece count is a guess and what it assumes, so the user can check it against the
  * package: Open Food Facts knows the serving size, not what one piece weighs.
  */
@@ -952,11 +987,6 @@ private fun Map<CalcField, CalcError>.firstMessage(vararg fields: CalcField): St
             CalcError.NOT_POSITIVE -> R.string.error_not_positive
             CalcError.NOT_WHOLE -> R.string.error_not_whole
             CalcError.ABOVE_100 -> R.string.error_above_100
-            CalcError.EXCEEDS_TOTAL -> when (field) {
-                CalcField.EATEN_PERCENT -> R.string.error_exceeds_percent
-                CalcField.EATEN_PIECES -> R.string.error_exceeds_pieces
-                else -> R.string.error_exceeds_grams
-            }
             CalcError.NEEDS_TOTAL_WEIGHT -> R.string.error_needs_total_weight
             CalcError.NEEDS_PIECE_WEIGHT -> R.string.error_needs_piece_weight
         },

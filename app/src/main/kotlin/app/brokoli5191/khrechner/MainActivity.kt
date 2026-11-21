@@ -62,6 +62,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // At most once a day, and only if the user leaves it on; see UpdateController.
+        (application as KhRechnerApplication).container.updates.checkIfDue()
+    }
+
     /**
      * The splash icon ducks, then springs out towards the viewer while the splash fades. View
      * animators follow the system animation scale, so this is instant with animations removed.
