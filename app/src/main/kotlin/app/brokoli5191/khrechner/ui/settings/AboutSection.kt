@@ -48,9 +48,8 @@ internal object Links {
  *
  * @param status state of Google's scanner; while it is not ready the app scans with its own.
  * @param cameraAvailable false on a device without a camera, where nothing can scan.
- * @param servicesVersion version of Google Play services, quoted next to a failed download.
  */
-data class ScannerInfo(val status: ScannerStatus, val cameraAvailable: Boolean = true, val servicesVersion: String? = null)
+data class ScannerInfo(val status: ScannerStatus, val cameraAvailable: Boolean = true)
 
 /**
  * "über": what the app is, the state of the barcode scanner, and where its code, its building
@@ -205,10 +204,6 @@ private fun ScannerRow(scanner: ScannerInfo, index: Int, count: Int, onInstall: 
                     }
                 is ScannerStatus.InstallFailed -> status.reason.message()
             },
-            // Which Play services turned the download down is the first thing a bug report needs.
-            scanner.servicesVersion
-                ?.takeIf { status is ScannerStatus.InstallFailed }
-                ?.let { stringResource(R.string.scanner_services_version, it) },
         ).joinToString(" ")
     }
     SegmentedListItem(
@@ -234,14 +229,15 @@ private fun ScannerRow(scanner: ScannerInfo, index: Int, count: Int, onInstall: 
     )
 }
 
-/** Why Google's scanner did not arrive. The three with a detail quote it as Play services gave it. */
+/** Why Google's scanner did not arrive, in one sentence. The details are in the log. */
 @Composable
 private fun InstallFailure.message(): String = when (this) {
     InstallFailure.MeteredNetwork -> stringResource(R.string.scanner_install_failed_metered)
     InstallFailure.NoStorage -> stringResource(R.string.scanner_install_failed_storage)
-    is InstallFailure.Rejected -> stringResource(R.string.scanner_install_failed_rejected, status)
-    is InstallFailure.DownloadFailed -> stringResource(R.string.scanner_install_failed_download, status)
-    is InstallFailure.NotSent -> stringResource(R.string.scanner_install_failed_not_sent, error)
+    InstallFailure.NoConnection -> stringResource(R.string.scanner_install_failed_connection)
+    InstallFailure.NotOffered -> stringResource(R.string.scanner_install_failed_not_offered)
+    InstallFailure.NoAnswer -> stringResource(R.string.scanner_install_failed_no_answer)
+    is InstallFailure.ServicesError -> stringResource(R.string.scanner_install_failed_services, code)
 }
 
 @Composable

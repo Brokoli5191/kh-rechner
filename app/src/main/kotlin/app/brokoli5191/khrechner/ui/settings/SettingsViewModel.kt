@@ -47,9 +47,6 @@ class SettingsViewModel(
 
     val scannerStatus: StateFlow<ScannerStatus> = scanner.status
 
-    /** Version of Google Play services, quoted next to a failed scanner download. */
-    val servicesVersion: String? get() = scanner.servicesVersion
-
     /** Read once from the bundled list; empty until then. */
     val libraries: StateFlow<List<LibraryGroup>> = flow { emit(libraries.load()) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())

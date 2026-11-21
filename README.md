@@ -44,7 +44,9 @@ enough.
 - All seven fields fit on one screen, with the keyboard open too.
 - `≈` marks a number that was rounded for display. Exact values are shown without it.
 - The barcode scan looks the product up on [Open Food Facts](https://world.openfoodfacts.org) and
-  fills in the carbs. A product you scanned once works offline afterwards.
+  fills in the carbs and the package weight. If the data shows how many pieces are in the
+  package, it fills that in too and tells you when the number is an estimate. A product you
+  scanned once works offline afterwards.
 - Save a calculation under a name and load it later with all its inputs.
 - Export everything to a JSON file and import it on another phone.
 - A second result line in KE (10 g) or BE (12 g), if you count in those.

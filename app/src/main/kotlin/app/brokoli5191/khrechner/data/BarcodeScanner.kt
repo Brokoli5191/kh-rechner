@@ -1,11 +1,11 @@
 package app.brokoli5191.khrechner.data
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.util.Log
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.moduleinstall.InstallStatusListener
 import com.google.android.gms.common.moduleinstall.ModuleInstall
 import com.google.android.gms.common.moduleinstall.ModuleInstallRequest
@@ -47,20 +47,26 @@ sealed interface InstallUpdate {
     data class Failed(val reason: InstallFailure) : InstallUpdate
 }
 
-/** Why the module did not arrive. The three with a text carry it verbatim, for bug reports. */
+/**
+ * Why the module did not arrive, as far as it can be put in a sentence for the user. What Play
+ * services said word for word goes to the log, not to the screen.
+ */
 sealed interface InstallFailure {
     /** Play services refuses to download the module over a metered connection. */
     data object MeteredNetwork : InstallFailure
     data object NoStorage : InstallFailure
 
-    /** Play services answered the request with an error. [status] is its code and name, e.g. "8 INTERNAL_ERROR". */
-    data class Rejected(val status: String) : InstallFailure
+    /** The download needs a connection and did not get one. */
+    data object NoConnection : InstallFailure
 
-    /** Play services accepted the request and the download failed afterwards. */
-    data class DownloadFailed(val status: String) : InstallFailure
+    /** Play services does not hand this module to this device or this app. */
+    data object NotOffered : InstallFailure
 
-    /** The request never got an answer from Play services. [error] is the exception that stopped it. */
-    data class NotSent(val error: String) : InstallFailure
+    /** Play services could not be reached or never answered. */
+    data object NoAnswer : InstallFailure
+
+    /** Play services failed on its side. [code] is its status code; it does not say more than that. */
+    data class ServicesError(val code: Int) : InstallFailure
 }
 
 /** Google's barcode scanner as the app sees it. */
@@ -68,9 +74,6 @@ interface BarcodeScanner {
 
     /** False on devices without Google Play services. */
     val isSupported: Boolean
-
-    /** Version of Google Play services on this device, for the about page; null if there is none. */
-    val servicesVersion: String?
 
     suspend fun availability(): ScannerAvailability
 
@@ -95,13 +98,6 @@ class GmsBarcodeScanner(private val context: Context) : BarcodeScanner {
     } catch (_: RuntimeException) {
         false
     }
-
-    override val servicesVersion: String?
-        get() = try {
-            context.packageManager.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, 0).versionName
-        } catch (_: PackageManager.NameNotFoundException) {
-            null
-        }
 
     private val options = GmsBarcodeScannerOptions.Builder()
         .setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8, Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E)
@@ -129,8 +125,8 @@ class GmsBarcodeScanner(private val context: Context) : BarcodeScanner {
             when (update.installState) {
                 InstallState.STATE_COMPLETED -> finish(InstallUpdate.Done)
                 InstallState.STATE_FAILED, InstallState.STATE_CANCELED -> {
-                    Log.w(TAG, "scanner module download failed: ${statusText(update.errorCode)}")
-                    finish(InstallUpdate.Failed(failure(update.errorCode, InstallFailure::DownloadFailed)))
+                    Log.w(TAG, "scanner module download failed with status ${update.errorCode}")
+                    finish(InstallUpdate.Failed(failureFor(update.errorCode)))
                 }
                 else -> {
                     val progress = update.progressInfo?.takeIf { it.totalBytesToDownload > 0 }
@@ -147,16 +143,12 @@ class GmsBarcodeScanner(private val context: Context) : BarcodeScanner {
                 .addOnFailureListener { error ->
                     Log.w(TAG, "scanner module request failed", error)
                     // Play services answers with a status; anything else never reached it.
-                    val reason = if (error is ApiException) {
-                        failure(error.statusCode, InstallFailure::Rejected, error.status.statusMessage)
-                    } else {
-                        InstallFailure.NotSent(errorText(error))
-                    }
+                    val reason = if (error is ApiException) failureFor(error.statusCode) else InstallFailure.NoAnswer
                     finish(InstallUpdate.Failed(reason))
                 }
         } catch (e: RuntimeException) {
             Log.w(TAG, "scanner module request could not be made", e)
-            finish(InstallUpdate.Failed(InstallFailure.NotSent(errorText(e))))
+            finish(InstallUpdate.Failed(InstallFailure.NoAnswer))
         }
         awaitClose { modules.unregisterListener(listener) }
     }
@@ -184,12 +176,6 @@ class GmsBarcodeScanner(private val context: Context) : BarcodeScanner {
 
     private fun client(context: Context): GmsBarcodeScanner = GmsBarcodeScanning.getClient(context, options)
 
-    private fun failure(code: Int, other: (String) -> InstallFailure, message: String? = null): InstallFailure = when (code) {
-        ModuleInstallStatusCodes.METERED_NETWORK_NOT_ALLOWED -> InstallFailure.MeteredNetwork
-        ModuleInstallStatusCodes.INSUFFICIENT_STORAGE -> InstallFailure.NoStorage
-        else -> other(statusText(code, message))
-    }
-
     private class TaskCancelled : Exception()
 
     /** Minimal bridge from a Play services [Task] to a coroutine; not worth a library for two calls. */
@@ -202,17 +188,22 @@ class GmsBarcodeScanner(private val context: Context) : BarcodeScanner {
     internal companion object {
         private const val TAG = "GmsBarcodeScanner"
 
-        /** "8 INTERNAL_ERROR", plus whatever Play services added in words. */
-        internal fun statusText(code: Int, message: String? = null): String {
-            val name = ModuleInstallStatusCodes.getStatusCodeString(code)
-            // Codes without a name come back as "unknown status code: 123"; the number alone says the same.
-            val status = if (name.startsWith("unknown")) "$code" else "$code $name"
-            return if (message.isNullOrBlank() || message == name) status else "$status: ${message.trim()}"
-        }
-
-        internal fun errorText(error: Throwable): String {
-            val name = error.javaClass.simpleName.ifEmpty { error.javaClass.name }
-            return error.message?.takeIf(String::isNotBlank)?.let { "$name: ${it.trim()}" } ?: name
+        /** Sorts a Play services status code into what it means for the user. */
+        internal fun failureFor(code: Int): InstallFailure = when (code) {
+            ModuleInstallStatusCodes.METERED_NETWORK_NOT_ALLOWED -> InstallFailure.MeteredNetwork
+            ModuleInstallStatusCodes.INSUFFICIENT_STORAGE -> InstallFailure.NoStorage
+            ModuleInstallStatusCodes.UNKNOWN_MODULE,
+            ModuleInstallStatusCodes.NOT_ALLOWED_MODULE,
+            ModuleInstallStatusCodes.MODULE_NOT_FOUND,
+            -> InstallFailure.NotOffered
+            CommonStatusCodes.NETWORK_ERROR, CommonStatusCodes.TIMEOUT -> InstallFailure.NoConnection
+            CommonStatusCodes.API_NOT_CONNECTED,
+            CommonStatusCodes.REMOTE_EXCEPTION,
+            CommonStatusCodes.CONNECTION_SUSPENDED_DURING_CALL,
+            CommonStatusCodes.RECONNECTION_TIMED_OUT,
+            CommonStatusCodes.RECONNECTION_TIMED_OUT_DURING_UPDATE,
+            -> InstallFailure.NoAnswer
+            else -> InstallFailure.ServicesError(code)
         }
     }
 }

@@ -61,6 +61,8 @@ object BackupCodec {
 
     private val barcodePattern = Regex("""\d{6,14}""")
 
+    private val pieceCountPattern = Regex("""[1-9]\d{0,3}""")
+
     fun fileName(date: LocalDate): String = "kh-rechner-${DateTimeFormatter.ISO_LOCAL_DATE.format(date)}.json"
 
     fun encode(data: AppData, exportedAt: Instant): String = json.encodeToString(
@@ -141,6 +143,7 @@ object BackupCodec {
         barcodePattern.matches(barcode) &&
             DecimalText.parse(carbsPer100) is ParsedNumber.Value &&
             (quantityGrams == null || DecimalText.parse(quantityGrams) is ParsedNumber.Value) &&
+            (pieceCount == null || pieceCountPattern.matches(pieceCount)) &&
             fetchedAt >= 0
 
     private fun isBlankOrNumber(text: String): Boolean = when (DecimalText.parse(text)) {

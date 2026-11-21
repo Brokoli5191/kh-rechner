@@ -69,7 +69,8 @@
     <!-- calculator: barcode -->
     <string name="action_scan">barcode scannen</string>
     <string name="action_remove_product">produkt entfernen</string>
-    <string name="product_weight_suggestion">gesamtgewicht %1$s g übernehmen</string>
+    <!-- %1$s is "=" or "≈", %2$s the weight of one piece -->
+    <string name="pieces_estimated_hint">stückzahl geschätzt, bitte prüfen: 1 stück %1$s %2$s g</string>
     <string name="lookup_loading">produkt wird gesucht</string>
     <string name="lookup_not_found">produkt nicht gefunden. wert bitte selbst eintragen.</string>
     <string name="lookup_no_carbs">für „%1$s“ ist kein kh-wert hinterlegt.</string>
@@ -136,10 +137,10 @@
     <string name="scanner_status_installing_percent">der google-scanner wird geladen … %1$d %%</string>
     <string name="scanner_install_failed_metered">der google-scanner wird nur über wlan geladen.</string>
     <string name="scanner_install_failed_storage">für den google-scanner fehlt speicherplatz.</string>
-    <string name="scanner_install_failed_rejected">google play-dienste lehnen es ab, den google-scanner zu laden (%1$s).</string>
-    <string name="scanner_install_failed_download">der download des google-scanners ist fehlgeschlagen (%1$s).</string>
-    <string name="scanner_install_failed_not_sent">die anfrage an google play-dienste ist gescheitert (%1$s).</string>
-    <string name="scanner_services_version">play-dienste %1$s.</string>
+    <string name="scanner_install_failed_connection">der google-scanner lässt sich nicht laden, weil die verbindung fehlt.</string>
+    <string name="scanner_install_failed_not_offered">google play-dienste bieten den google-scanner für dieses gerät nicht an.</string>
+    <string name="scanner_install_failed_no_answer">der google-scanner lässt sich nicht laden, weil google play-dienste nicht antworten.</string>
+    <string name="scanner_install_failed_services">der google-scanner lässt sich nicht laden: fehler %1$d in den google play-diensten.</string>
     <string name="action_load">laden</string>
     <string name="action_retry">nochmal</string>
     <string name="action_back">zurück</string>

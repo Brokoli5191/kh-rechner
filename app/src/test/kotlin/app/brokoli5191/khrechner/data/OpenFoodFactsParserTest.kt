@@ -89,4 +89,91 @@ class OpenFoodFactsParserTest {
         assertEquals(RemoteProduct.Unavailable, OpenFoodFactsParser.parse(""))
         assertEquals(RemoteProduct.Unavailable, OpenFoodFactsParser.parse("[]"))
     }
+
+    // --- pieces ------------------------------------------------------------------------------
+
+    private fun pieces(fields: String): ProductPieces? = (
+        OpenFoodFactsParser.parse("""{"status":1,"product":{"nutriments":{"carbohydrates_100g":10},$fields}}""") as RemoteProduct.Found
+        ).pieces
+
+    @Test
+    fun `a real biscuit package yields weight and pieces from the serving size`() {
+        // GET /api/v2/product/4017100291005.json as answered in November 2026, cut down to the fields the app asks for.
+        val body = """
+            {"code":"4017100291005","status":1,"status_verbose":"product found",
+             "product":{"product_name":"CHOCO LEIBNIZ EDELHERB","quantity":"125 gram","product_quantity":125,"product_quantity_unit":"g",
+                        "serving_size":"13.9 g","serving_quantity":13.9,"serving_quantity_unit":"g",
+                        "nutriments":{"carbohydrates":58,"carbohydrates_100g":58,"carbohydrates_serving":8.06,"carbohydrates_unit":"g"}}}
+        """.trimIndent()
+        assertEquals(
+            RemoteProduct.Found("CHOCO LEIBNIZ EDELHERB", "58", "125", ProductPieces(9, estimated = true)),
+            OpenFoodFactsParser.parse(body),
+        )
+    }
+
+    @Test
+    fun `a label that counts the pieces is taken at its word`() {
+        assertEquals(ProductPieces(6, estimated = false), pieces(""""quantity":"6 x 25 g","product_quantity":150,"product_quantity_unit":"g""""))
+        assertEquals(ProductPieces(4, estimated = false), pieces(""""quantity":"4×125g""""))
+        // The serving says something else; the label wins.
+        assertEquals(
+            ProductPieces(10, estimated = false),
+            pieces(""""quantity":"10 x 20 g","product_quantity":200,"product_quantity_unit":"g","serving_size":"40 g","serving_quantity":40,"serving_quantity_unit":"g""""),
+        )
+    }
+
+    @Test
+    fun `a serving rounded on the label still gives a whole number of pieces`() {
+        // 125 g / 14 g is 8.93: nine biscuits, with the serving rounded up from 13.9 g.
+        assertEquals(
+            ProductPieces(9, estimated = true),
+            pieces(""""product_quantity":125,"product_quantity_unit":"g","serving_size":"14g","serving_quantity":14,"serving_quantity_unit":"g""""),
+        )
+        assertEquals(
+            ProductPieces(48, estimated = true),
+            pieces(""""product_quantity":400,"product_quantity_unit":"g","serving_quantity":8.3,"serving_quantity_unit":"g""""),
+        )
+    }
+
+    @Test
+    fun `a serving described as several pieces is split up`() {
+        fun serving(text: String, grams: String) =
+            pieces(""""product_quantity":252,"product_quantity_unit":"g","serving_size":"$text","serving_quantity":$grams,"serving_quantity_unit":"g"""")
+        assertEquals(ProductPieces(18, estimated = true), serving("2 Kekse (28 g)", "28"))
+        assertEquals(ProductPieces(18, estimated = true), serving("28 g (2 biscuits)", "28"))
+        assertEquals(ProductPieces(18, estimated = true), serving("ca. 2 Stück (28g)", "28"))
+        assertEquals(ProductPieces(18, estimated = true), serving("1 Keks (14 g)", "14"))
+        // A decimal count is not guessed at; the serving then counts as one piece.
+        assertEquals(ProductPieces(9, estimated = true), serving("2.5 biscuits (28 g)", "28"))
+    }
+
+    @Test
+    fun `the serving text is enough where the numbers are missing`() {
+        assertEquals(ProductPieces(9, estimated = true), pieces(""""quantity":"125 g","serving_size":"1 Keks (13,9 g)""""))
+        assertEquals(ProductPieces(5, estimated = true), pieces(""""quantity":"1 kg","serving_size":"200 g""""))
+    }
+
+    @Test
+    fun `no pieces where a serving is not a piece`() {
+        fun serving(total: String, grams: String) =
+            pieces(""""product_quantity":$total,"product_quantity_unit":"g","serving_size":"$grams g","serving_quantity":$grams,"serving_quantity_unit":"g"""")
+        // 125 g in servings of 28 g is 4.46 of something.
+        assertNull(serving("125", "28"))
+        assertNull(serving("400", "15"))
+        assertNull(serving("750", "40"))
+        // The whole package is one serving: nothing to count.
+        assertNull(serving("150", "150"))
+        assertNull(serving("100", "250"))
+    }
+
+    @Test
+    fun `no pieces without a weight to divide`() {
+        assertNull(pieces(""""serving_size":"14 g","serving_quantity":14,"serving_quantity_unit":"g""""))
+        assertNull(pieces(""""product_quantity":125,"product_quantity_unit":"g""""))
+        assertNull(pieces(""""product_quantity":125,"product_quantity_unit":"g","serving_size":"1 Keks""""))
+        // Drinks are measured in millilitres, on either side.
+        assertNull(pieces(""""product_quantity":1000,"product_quantity_unit":"ml","serving_size":"250 ml","serving_quantity":250,"serving_quantity_unit":"ml""""))
+        assertNull(pieces(""""product_quantity":500,"product_quantity_unit":"g","serving_size":"100 ml","serving_quantity":100,"serving_quantity_unit":"ml""""))
+        assertNull(pieces(""""product_quantity":125,"product_quantity_unit":"g","serving_quantity":0,"serving_quantity_unit":"g""""))
+    }
 }

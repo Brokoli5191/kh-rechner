@@ -61,7 +61,8 @@
     <!-- calculator: barcode -->
     <string name="action_scan">scan barcode</string>
     <string name="action_remove_product">remove product</string>
-    <string name="product_weight_suggestion">use %1$s g as total weight</string>
+    <!-- %1$s is "=" or "≈", %2$s the weight of one piece -->
+    <string name="pieces_estimated_hint">piece count estimated, please check: 1 piece %1$s %2$s g</string>
     <string name="lookup_loading">looking up product</string>
     <string name="lookup_not_found">product not found. please enter the value yourself.</string>
     <string name="lookup_no_carbs">no carb value on record for “%1$s”.</string>
@@ -126,10 +127,10 @@
     <string name="scanner_status_installing_percent">the google scanner is downloading … %1$d %%</string>
     <string name="scanner_install_failed_metered">the google scanner is only downloaded over wi-fi.</string>
     <string name="scanner_install_failed_storage">there is not enough storage for the google scanner.</string>
-    <string name="scanner_install_failed_rejected">google play services refuses to download the google scanner (%1$s).</string>
-    <string name="scanner_install_failed_download">downloading the google scanner failed (%1$s).</string>
-    <string name="scanner_install_failed_not_sent">the request to google play services failed (%1$s).</string>
-    <string name="scanner_services_version">play services %1$s.</string>
+    <string name="scanner_install_failed_connection">the google scanner cannot be downloaded because there is no connection.</string>
+    <string name="scanner_install_failed_not_offered">google play services does not offer the google scanner for this device.</string>
+    <string name="scanner_install_failed_no_answer">the google scanner cannot be downloaded because google play services does not answer.</string>
+    <string name="scanner_install_failed_services">the google scanner cannot be downloaded: error %1$d in google play services.</string>
     <string name="action_load">download</string>
     <string name="action_retry">retry</string>
     <string name="action_back">back</string>

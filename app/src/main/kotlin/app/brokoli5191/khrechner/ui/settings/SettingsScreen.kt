@@ -113,7 +113,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings, onOpenLibra
 
     SettingsContent(
         settings = settings,
-        scanner = ScannerInfo(scannerStatus, viewModel.cameraAvailable, viewModel.servicesVersion),
+        scanner = ScannerInfo(scannerStatus, viewModel.cameraAvailable),
         libraryCount = libraries.size,
         snackbar = snackbar,
         onInstallScanner = viewModel::installScanner,

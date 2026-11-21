@@ -18,7 +18,7 @@ class ScannerControllerTest {
 
     private val scanner = FakeScanner()
     private val context: Context get() = ApplicationProvider.getApplicationContext()
-    private val rejected = InstallFailure.Rejected("8 INTERNAL_ERROR")
+    private val rejected = InstallFailure.ServicesError(8)
 
     private fun TestScope.controller() = ScannerController(scanner, backgroundScope)
 
@@ -93,18 +93,15 @@ class ScannerControllerTest {
     }
 
     @Test
-    fun `play services errors are quoted with their number and name`() {
-        assertEquals("8 INTERNAL_ERROR", GmsBarcodeScanner.statusText(8))
-        assertEquals("46000 UNKNOWN_MODULE", GmsBarcodeScanner.statusText(46000))
-        assertEquals("8 INTERNAL_ERROR: module broker died", GmsBarcodeScanner.statusText(8, " module broker died "))
-        assertEquals("8 INTERNAL_ERROR", GmsBarcodeScanner.statusText(8, ""))
-        // A code Play services has no name for.
-        assertEquals("31337", GmsBarcodeScanner.statusText(31337))
-    }
-
-    @Test
-    fun `errors that never reached play services are quoted by class and message`() {
-        assertEquals("IllegalStateException: no binder", GmsBarcodeScanner.errorText(IllegalStateException("no binder")))
-        assertEquals("UnsupportedOperationException", GmsBarcodeScanner.errorText(UnsupportedOperationException()))
+    fun `status codes are sorted into what they mean for the user`() {
+        assertEquals(InstallFailure.MeteredNetwork, GmsBarcodeScanner.failureFor(46004))
+        assertEquals(InstallFailure.NoStorage, GmsBarcodeScanner.failureFor(46003))
+        for (code in listOf(46000, 46001, 46002)) assertEquals(InstallFailure.NotOffered, GmsBarcodeScanner.failureFor(code))
+        for (code in listOf(7, 15)) assertEquals(InstallFailure.NoConnection, GmsBarcodeScanner.failureFor(code))
+        for (code in listOf(17, 19, 20, 21, 22)) assertEquals(InstallFailure.NoAnswer, GmsBarcodeScanner.failureFor(code))
+        // Everything else is Play services' own trouble; the number is all there is to say.
+        assertEquals(InstallFailure.ServicesError(8), GmsBarcodeScanner.failureFor(8))
+        assertEquals(InstallFailure.ServicesError(13), GmsBarcodeScanner.failureFor(13))
+        assertEquals(InstallFailure.ServicesError(31337), GmsBarcodeScanner.failureFor(31337))
     }
 }

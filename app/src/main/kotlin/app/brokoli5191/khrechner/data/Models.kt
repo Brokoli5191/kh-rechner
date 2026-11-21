@@ -43,9 +43,23 @@ data class CachedProduct(
     val carbsPer100: String,
     /** Package weight in grams if the source stated one in grams, canonical text. */
     val quantityGrams: String? = null,
+    /** Pieces in the package, a whole number as text, if the source allowed one to be worked out. */
+    val pieceCount: String? = null,
+    /** True if [pieceCount] is derived from the serving size instead of being stated on the label. */
+    val pieceCountEstimated: Boolean = false,
     /** Epoch milliseconds. */
     val fetchedAt: Long,
-)
+    /**
+     * What the lookup that wrote this entry could read. Entries older than [REVISION] lack fields
+     * the app now fills in, so they are fetched again as soon as there is a connection.
+     */
+    val revision: Int = 1,
+) {
+    companion object {
+        /** 2: piece count. */
+        const val REVISION: Int = 2
+    }
+}
 
 @Serializable
 data class AppData(
