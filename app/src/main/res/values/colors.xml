@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The launcher icon keeps its own wheat tone; the themed (monochrome) variant follows the wallpaper. -->
+    <color name="ic_launcher_background">#F5DFA8</color>
+
+    <!-- Material You from the very first frame: window and splash take the system's dynamic palette. -->
+    <color name="window_background">@android:color/system_neutral1_10</color>
+    <color name="splash_icon">@android:color/system_accent1_600</color>
+</resources>

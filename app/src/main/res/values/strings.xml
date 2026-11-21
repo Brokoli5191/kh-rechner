@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Launcher label. Everything inside the app is lowercase on purpose. -->
+    <string name="app_name" translatable="false">KH Rechner</string>
+    <string name="app_title">kh rechner</string>
+
+    <!-- navigation -->
+    <string name="nav_calculate">rechnen</string>
+    <string name="nav_saved">gespeichert</string>
+    <string name="nav_settings">einstellungen</string>
+
+    <!-- generic actions -->
+    <string name="action_save">speichern</string>
+    <string name="action_reset">zurücksetzen</string>
+    <string name="action_cancel">abbrechen</string>
+    <string name="action_undo">rückgängig</string>
+
+    <!-- calculator: fields -->
+    <string name="section_eaten">gegessen</string>
+    <string name="field_carbs_per_100">kh pro 100 g</string>
+    <string name="field_total_weight">gesamtgewicht</string>
+    <string name="field_piece_count">anzahl der stücke</string>
+    <string name="field_grams_per_piece">gramm pro stück</string>
+    <string name="field_eaten_percent">gegessen in prozent</string>
+    <string name="field_eaten_pieces">gegessen in stücken</string>
+    <string name="field_eaten_grams">gegessen in g</string>
+    <!-- short labels inside the "gegessen" group; screen readers get the full names above -->
+    <string name="field_eaten_percent_short">prozent</string>
+    <string name="field_eaten_pieces_short">stücke</string>
+    <string name="field_eaten_grams_short">gramm</string>
+    <string name="unit_grams" translatable="false">g</string>
+    <string name="state_calculated">berechnet</string>
+
+    <!-- calculator: result -->
+    <string name="result_label">kh gegessen</string>
+    <string name="result_grams" translatable="false">%1$s g</string>
+    <string name="result_none" translatable="false">–</string>
+    <string name="result_unit_ke">%1$s ke</string>
+    <string name="result_unit_be">%1$s be</string>
+    <string name="a11y_result">%1$s gramm kohlenhydrate</string>
+    <string name="a11y_result_approx">ungefähr %1$s gramm kohlenhydrate</string>
+    <string name="a11y_result_none">noch kein ergebnis</string>
+
+    <!-- calculator: inline errors -->
+    <string name="error_in_field" translatable="false">%1$s: %2$s</string>
+    <string name="error_invalid_number">keine gültige zahl</string>
+    <string name="error_negative">darf nicht negativ sein</string>
+    <string name="error_not_positive">muss größer als 0 sein</string>
+    <string name="error_not_whole">nur ganze zahlen</string>
+    <string name="error_above_100">höchstens 100 g pro 100 g</string>
+    <string name="error_exceeds_percent">mehr als 100 %</string>
+    <string name="error_exceeds_pieces">mehr stücke als vorhanden</string>
+    <string name="error_exceeds_grams">mehr als das gesamtgewicht</string>
+    <string name="error_needs_total_weight">dafür fehlt das gesamtgewicht</string>
+    <string name="error_needs_piece_weight">dafür fehlen gesamtgewicht und stückzahl</string>
+
+    <!-- calculator: save and reset -->
+    <string name="save_dialog_title">berechnung speichern</string>
+    <string name="name_placeholder">name, z. b. apfel</string>
+    <string name="name_counter" translatable="false">%1$d / %2$d</string>
+    <string name="snackbar_saved">gespeichert</string>
+    <string name="snackbar_reset">zurückgesetzt</string>
+
+    <!-- calculator: hand-off to aaps -->
+    <string name="action_send_aaps">an aaps</string>
+    <string name="action_send_aaps_amount">%1$d g an aaps</string>
+    <string name="snackbar_aaps_copied">%1$d g kopiert, in aaps einfügen</string>
+
+    <!-- calculator: barcode -->
+    <string name="action_scan">barcode scannen</string>
+    <string name="action_remove_product">produkt entfernen</string>
+    <string name="product_weight_suggestion">gesamtgewicht %1$s g übernehmen</string>
+    <string name="lookup_loading">produkt wird gesucht</string>
+    <string name="lookup_not_found">produkt nicht gefunden. wert bitte selbst eintragen.</string>
+    <string name="lookup_no_carbs">für „%1$s“ ist kein kh-wert hinterlegt.</string>
+    <string name="lookup_offline">keine verbindung. wert bitte selbst eintragen.</string>
+    <string name="lookup_scanner_unavailable">der scanner ist noch nicht bereit. bitte gleich nochmal versuchen.</string>
+
+    <!-- saved -->
+    <string name="saved_empty">noch nichts gespeichert</string>
+    <string name="saved_edit">%1$s bearbeiten</string>
+    <string name="saved_no_result">kein ergebnis</string>
+    <string name="action_rename">umbenennen</string>
+    <string name="action_duplicate">duplizieren</string>
+    <string name="action_delete">löschen</string>
+    <string name="duplicate_name">%1$s (kopie)</string>
+    <string name="snackbar_deleted">„%1$s“ gelöscht</string>
+
+    <!-- settings -->
+    <string name="settings_appearance">darstellung</string>
+    <string name="theme_system">system</string>
+    <string name="theme_light">hell</string>
+    <string name="theme_dark">dunkel</string>
+    <string name="settings_dynamic_color">dynamische farben</string>
+    <string name="settings_dynamic_color_summary">farben vom hintergrundbild übernehmen</string>
+    <string name="settings_language">sprache</string>
+    <string name="language_system">system</string>
+    <string name="language_german" translatable="false">deutsch</string>
+    <string name="language_english" translatable="false">english</string>
+    <string name="settings_result">ergebnis</string>
+    <string name="settings_carb_unit">zusätzliche einheit</string>
+    <string name="settings_carb_unit_summary">ke = 10 g kh, be = 12 g kh</string>
+    <string name="carb_unit_none">aus</string>
+    <string name="carb_unit_ke">ke</string>
+    <string name="carb_unit_be">be</string>
+    <string name="settings_data">daten</string>
+    <string name="settings_export">exportieren</string>
+    <string name="settings_export_summary">gespeicherte berechnungen als json-datei sichern</string>
+    <string name="settings_import">importieren</string>
+    <string name="settings_import_summary">berechnungen aus einer json-datei laden</string>
+    <string name="settings_version">version %1$s</string>
+
+    <!-- settings: export and import -->
+    <plurals name="export_done">
+        <item quantity="one">%1$d berechnung exportiert</item>
+        <item quantity="other">%1$d berechnungen exportiert</item>
+    </plurals>
+    <string name="export_failed">export fehlgeschlagen</string>
+    <string name="import_dialog_title">importieren</string>
+    <plurals name="import_dialog_text">
+        <item quantity="one">die datei enthält %1$d berechnung. zusammenführen behält deine bisherigen und überspringt doppelte, ersetzen löscht sie.</item>
+        <item quantity="other">die datei enthält %1$d berechnungen. zusammenführen behält deine bisherigen und überspringt doppelte, ersetzen löscht sie.</item>
+    </plurals>
+    <string name="import_merge">zusammenführen</string>
+    <string name="import_replace">ersetzen</string>
+    <string name="import_done" tools:ignore="PluralsCandidate">%1$d importiert, %2$d übersprungen</string>
+    <string name="import_error_unreadable">die datei konnte nicht gelesen werden</string>
+    <string name="import_error_not_json">das ist keine json-datei</string>
+    <string name="import_error_not_a_backup">das ist kein export aus kh rechner</string>
+    <string name="import_error_newer_version">die datei stammt aus einer neueren app-version (format %1$d). bitte kh rechner aktualisieren.</string>
+    <string name="import_error_unknown_version">unbekanntes dateiformat (format %1$d)</string>
+    <string name="import_error_invalid_content">die datei enthält ungültige einträge und wurde nicht importiert</string>
+</resources>
