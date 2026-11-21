@@ -20,12 +20,17 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.brokoli5191.khrechner.BuildConfig
 import app.brokoli5191.khrechner.TestApplication
+import app.brokoli5191.khrechner.data.InstallFailure
+import app.brokoli5191.khrechner.data.InstallUpdate
 import app.brokoli5191.khrechner.data.RemoteProduct
+import app.brokoli5191.khrechner.data.ScanFailure
 import app.brokoli5191.khrechner.data.ScanResult
 import app.brokoli5191.khrechner.data.Settings
 import app.brokoli5191.khrechner.data.ThemeMode
 import app.brokoli5191.khrechner.ui.theme.KhRechnerTheme
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
@@ -59,6 +64,10 @@ class AppFlowTest {
 
     /** A tile by its name: the visible label, or the spoken one where the label is abbreviated. */
     private fun field(name: String) = compose.onNode(hasSetTextAction() and (hasText(name) or hasContentDescription(name)))
+
+    private fun awaitText(text: String) {
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() }
+    }
 
     private fun awaitResult(description: String) {
         compose.waitUntil(timeoutMillis = 5_000) {
@@ -198,13 +207,18 @@ class AppFlowTest {
         compose.onNodeWithContentDescription("barcode scannen").performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("keine verbindung", substring = true)).fetchSemanticsNodes().isNotEmpty() }
 
-        app.scanner.next = ScanResult.Unavailable
+        // A failure the app has no words for is shown with the scanner's own error code.
+        app.scanner.next = ScanResult.Failed(ScanFailure.OTHER, 13)
         compose.onNodeWithContentDescription("barcode scannen").performClick()
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText("scanner ist noch nicht bereit", substring = true)).fetchSemanticsNodes().isNotEmpty() }
+        awaitText("scannen fehlgeschlagen (fehler 13).")
+
+        app.scanner.next = ScanResult.Failed(ScanFailure.CAMERA_PERMISSION, 202)
+        compose.onNodeWithContentDescription("barcode scannen").performClick()
+        awaitText("google play-dienste brauchen die kamera-berechtigung, um zu scannen.")
 
         // The calculator never waits on the network: typing still works and clears the message.
         field("kh pro 100 g").performTextInput("12")
-        compose.onNode(hasText("scanner ist noch nicht bereit", substring = true)).assertDoesNotExist()
+        compose.onNode(hasText("kamera-berechtigung", substring = true)).assertDoesNotExist()
         field("gegessen in g").performScrollTo().performTextInput("50")
         awaitResult("6 gramm kohlenhydrate")
     }
@@ -224,5 +238,71 @@ class AppFlowTest {
         field("gegessen in g").performScrollTo().performTextInput("30")
         awaitResult("ungefähr 1,6 gramm kohlenhydrate")
         compose.onNodeWithText("≈ 0,2 ke", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `a missing scanner module is downloaded with visible progress, then the scan runs`() {
+        val gate = CompletableDeferred<Unit>()
+        app.scanner.installed = false
+        app.scanner.installUpdates = listOf(InstallUpdate.Progress(null), InstallUpdate.Progress(40), InstallUpdate.Done)
+        app.scanner.installGate = gate
+        app.scanner.next = ScanResult.Code("3017624010701")
+        app.productSource.answer = RemoteProduct.Found("Nutella", "57.5", "400")
+
+        compose.onNodeWithContentDescription("barcode scannen").performClick()
+        awaitText("scanner wird geladen … 40 %")
+        // The field stays usable while the download runs.
+        field("gesamtgewicht").performTextInput("250")
+
+        gate.complete(Unit)
+        awaitText("Nutella")
+        field("kh pro 100 g").assertTextContains("57,5")
+        // One attempt that found the module missing, one after the download.
+        assertEquals(2, app.scanner.scans)
+    }
+
+    @Test
+    fun `a failed scanner download says why`() {
+        app.scanner.installed = false
+        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.METERED_NETWORK, 46004))
+        compose.onNodeWithContentDescription("barcode scannen").performClick()
+        awaitText("der scanner wird nur über wlan geladen.")
+
+        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.OTHER, 46000))
+        compose.onNodeWithContentDescription("barcode scannen").performClick()
+        awaitText("der scanner konnte nicht geladen werden (fehler 46000).")
+        assertEquals(emptyList<String>(), app.productSource.requested)
+    }
+
+    @Test
+    fun `the about section shows the scanner state and offers the download`() {
+        app.scanner.installed = false
+        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.NO_STORAGE, 46003))
+        compose.onNodeWithText("einstellungen").performClick()
+        compose.onNodeWithText("barcode-scanner").performScrollTo()
+        awaitText("noch nicht geladen")
+
+        compose.onNodeWithText("laden").performClick()
+        awaitText("zu wenig speicher, um den scanner zu laden.")
+
+        app.scanner.installUpdates = listOf(InstallUpdate.Done)
+        compose.onNodeWithText("nochmal").performClick()
+        awaitText("bereit")
+        compose.onNodeWithText("nochmal").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the about section leads to the libraries and back`() {
+        compose.onNodeWithText("einstellungen").performClick()
+        compose.onNodeWithText("verwendete bibliotheken").performScrollTo()
+        compose.onNodeWithText("version " + BuildConfig.VERSION_NAME).assertExists()
+        compose.onNodeWithText("quellcode").assertExists()
+        compose.onNodeWithText("verwendete bibliotheken").performClick()
+
+        awaitText("androidx.activity")
+        // Still under the settings tab, with a way back.
+        compose.onNodeWithContentDescription("zurück").performClick()
+        awaitText("darstellung")
+        compose.onNodeWithText("androidx.activity").assertDoesNotExist()
     }
 }

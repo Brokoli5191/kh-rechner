@@ -109,7 +109,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.brokoli5191.khrechner.R
 import app.brokoli5191.khrechner.data.AapsHandoff
-import app.brokoli5191.khrechner.data.BarcodeScanner
+import app.brokoli5191.khrechner.data.ScanFailure
 import app.brokoli5191.khrechner.domain.CalcError
 import app.brokoli5191.khrechner.domain.CalcField
 import app.brokoli5191.khrechner.domain.CarbUnit
@@ -121,6 +121,7 @@ import app.brokoli5191.khrechner.ui.components.APPROXIMATELY
 import app.brokoli5191.khrechner.ui.components.LocalDecimalSeparator
 import app.brokoli5191.khrechner.ui.components.NameDialog
 import app.brokoli5191.khrechner.ui.components.RollingNumber
+import app.brokoli5191.khrechner.ui.components.installFailureMessage
 import app.brokoli5191.khrechner.ui.components.shown
 import app.brokoli5191.khrechner.ui.components.withSeparator
 import app.brokoli5191.khrechner.ui.theme.AppMotion
@@ -131,7 +132,7 @@ import kotlinx.coroutines.launch
 fun CalculatorScreen(
     viewModel: CalculatorViewModel,
     carbUnit: CarbUnit,
-    scanner: BarcodeScanner,
+    canScan: Boolean,
     aaps: AapsHandoff,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -155,9 +156,10 @@ fun CalculatorScreen(
         fields = viewModel.fields,
         carbUnit = carbUnit,
         snackbar = snackbar,
-        canScan = scanner.isSupported,
+        canScan = canScan,
         showAaps = aapsInstalled,
-        onScan = { scope.launch { viewModel.onScanResult(scanner.scan(context)) } },
+        // Launched from the screen: leaving it stops waiting, while a download carries on in the background.
+        onScan = { scope.launch { viewModel.scanBarcode(context) } },
         onSendToAaps = {
             state.wholeGrams?.let { grams ->
                 // Clipboard first, then AAPS on top; the user pastes and confirms over there.
@@ -303,7 +305,7 @@ fun CalculatorContent(
                         height = tileHeight,
                         motion = motion,
                         trailingIcon = if (canScan) {
-                            { ScanButton(loading = state.lookup == LookupStatus.Loading, onScan = onScan) }
+                            { ScanButton(loading = state.lookup.isBusy, onScan = onScan) }
                         } else {
                             null
                         },
@@ -929,13 +931,32 @@ private fun unitLine(state: CalculatorUiState, unit: CarbUnit): String? {
     }
 }
 
+/** A lookup or a scanner download is running; the scan button shows a spinner meanwhile. */
+private val LookupStatus.isBusy: Boolean
+    get() = this == LookupStatus.Loading || this is LookupStatus.ScannerInstalling
+
 @Composable
 private fun LookupStatus.message(): String? = when (this) {
     LookupStatus.Idle, LookupStatus.Loading -> null
     LookupStatus.NotFound -> stringResource(R.string.lookup_not_found)
     is LookupStatus.NoCarbs -> stringResource(R.string.lookup_no_carbs, name)
     LookupStatus.Offline -> stringResource(R.string.lookup_offline)
-    LookupStatus.ScannerUnavailable -> stringResource(R.string.lookup_scanner_unavailable)
+    is LookupStatus.ScannerInstalling ->
+        if (percent == null) {
+            stringResource(R.string.scanner_installing)
+        } else {
+            stringResource(R.string.scanner_installing_percent, percent)
+        }
+    LookupStatus.ScannerStillInstalling -> stringResource(R.string.scanner_still_installing)
+    is LookupStatus.ScannerInstallFailed -> installFailureMessage(reason, code)
+    is LookupStatus.ScanFailed -> when (reason) {
+        ScanFailure.MODULE_NOT_READY -> stringResource(R.string.scan_failed_not_ready)
+        ScanFailure.PLAY_SERVICES_OUTDATED -> stringResource(R.string.scan_failed_play_services)
+        ScanFailure.CAMERA_PERMISSION -> stringResource(R.string.scan_failed_camera)
+        // Another scan is already open; nothing to tell.
+        ScanFailure.BUSY -> null
+        ScanFailure.OTHER -> stringResource(R.string.scan_failed_other, code)
+    }
 }
 
 /** Message for the first of [fields] that has an error, prefixed with the field it belongs to. */

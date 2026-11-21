@@ -1,6 +1,7 @@
 package app.brokoli5191.khrechner.ui.settings
 
 import android.app.LocaleManager
+import android.content.ActivityNotFoundException
 import android.os.LocaleList
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -38,20 +39,21 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.brokoli5191.khrechner.BuildConfig
 import app.brokoli5191.khrechner.R
 import app.brokoli5191.khrechner.data.AppData
 import app.brokoli5191.khrechner.data.BackupCodec
 import app.brokoli5191.khrechner.data.ImportError
 import app.brokoli5191.khrechner.data.ImportMode
+import app.brokoli5191.khrechner.data.ScannerStatus
 import app.brokoli5191.khrechner.data.Settings
 import app.brokoli5191.khrechner.data.ThemeMode
 import app.brokoli5191.khrechner.domain.CarbUnit
@@ -59,15 +61,24 @@ import app.brokoli5191.khrechner.ui.components.Choice
 import app.brokoli5191.khrechner.ui.components.ConnectedChoiceGroup
 import app.brokoli5191.khrechner.ui.theme.popIn
 import java.time.LocalDate
+import kotlinx.coroutines.launch
 
 /** Language tags offered in the picker; null follows the system. Must match `locales_config.xml`. */
 private const val GERMAN = "de"
 private const val ENGLISH = "en"
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings) {
+fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings, onOpenLibraries: () -> Unit) {
     val pendingImport by viewModel.pendingImport.collectAsStateWithLifecycle()
+    val scannerStatus by viewModel.scannerStatus.collectAsStateWithLifecycle()
+    val libraries by viewModel.libraries.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+
+    // The scanner module may have arrived (or gone) while the app was in the background.
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshScanner()
+        onPauseOrDispose { }
+    }
     val haptics = LocalHapticFeedback.current
     val resources = LocalResources.current
 
@@ -103,7 +114,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings) {
 
     SettingsContent(
         settings = settings,
+        scannerStatus = scannerStatus,
+        libraryCount = libraries.size,
         snackbar = snackbar,
+        onInstallScanner = viewModel::installScanner,
+        onOpenLibraries = onOpenLibraries,
+        onOpenLink = rememberLinkOpener(snackbar),
         onThemeMode = viewModel::setThemeMode,
         onDynamicColor = viewModel::setDynamicColor,
         onCarbUnit = viewModel::setCarbUnit,
@@ -125,7 +141,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings) {
 @Composable
 fun SettingsContent(
     settings: Settings,
+    scannerStatus: ScannerStatus,
+    libraryCount: Int,
     snackbar: SnackbarHostState,
+    onInstallScanner: () -> Unit,
+    onOpenLibraries: () -> Unit,
+    onOpenLink: (String) -> Unit,
     onThemeMode: (ThemeMode) -> Unit,
     onDynamicColor: (Boolean) -> Unit,
     onCarbUnit: (CarbUnit) -> Unit,
@@ -236,21 +257,20 @@ fun SettingsContent(
                 )
             }
 
-            Text(
-                text = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 32.dp),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+            AboutSection(
+                scannerStatus = scannerStatus,
+                libraryCount = libraryCount,
+                firstIndex = 4,
+                onInstallScanner = onInstallScanner,
+                onOpenLibraries = onOpenLibraries,
+                onOpenLink = onOpenLink,
             )
         }
     }
 }
 
 @Composable
-private fun SectionTitle(text: String) {
+internal fun SectionTitle(text: String) {
     Text(
         text = text,
         modifier = Modifier
@@ -263,13 +283,13 @@ private fun SectionTitle(text: String) {
 
 /** Rows sit on a tonal card so each group reads as one block against the plain page. */
 @Composable
-private fun groupColors() = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+internal fun groupColors() = ListItemDefaults.segmentedColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
 
 /** [index] staggers the groups' entrance down the page. */
 @Composable
-private fun SettingsGroup(index: Int, content: @Composable () -> Unit) {
+internal fun SettingsGroup(index: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Column(
-        modifier = Modifier.popIn(index),
+        modifier = modifier.popIn(index),
         verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
     ) { content() }
 }
@@ -326,4 +346,26 @@ private fun ImportDialog(
             }
         },
     )
+}
+
+/**
+ * Opens a web link in the browser. If the device has nothing that can open it, says so in
+ * [snackbar] instead of failing silently.
+ */
+@Composable
+internal fun rememberLinkOpener(snackbar: SnackbarHostState): (String) -> Unit {
+    val uriHandler = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
+    val failed = stringResource(R.string.link_failed)
+    return remember(uriHandler, snackbar, failed) {
+        { url: String ->
+            try {
+                uriHandler.openUri(url)
+            } catch (_: IllegalArgumentException) {
+                scope.launch { snackbar.showSnackbar(failed) }
+            } catch (_: ActivityNotFoundException) {
+                scope.launch { snackbar.showSnackbar(failed) }
+            }
+        }
+    }
 }

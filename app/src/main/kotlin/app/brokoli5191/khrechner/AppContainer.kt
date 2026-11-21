@@ -12,9 +12,11 @@ import app.brokoli5191.khrechner.data.BackupRepository
 import app.brokoli5191.khrechner.data.BarcodeScanner
 import app.brokoli5191.khrechner.data.EntryRepository
 import app.brokoli5191.khrechner.data.GmsBarcodeScanner
+import app.brokoli5191.khrechner.data.LibraryCatalog
 import app.brokoli5191.khrechner.data.OpenFoodFactsClient
 import app.brokoli5191.khrechner.data.ProductRepository
 import app.brokoli5191.khrechner.data.ProductSource
+import app.brokoli5191.khrechner.data.ScannerController
 import app.brokoli5191.khrechner.data.Settings
 import app.brokoli5191.khrechner.data.SettingsRepository
 import app.brokoli5191.khrechner.data.jsonDataStore
@@ -33,7 +35,7 @@ import kotlinx.coroutines.SupervisorJob
  */
 class AppContainer(
     context: Context,
-    val scanner: BarcodeScanner = GmsBarcodeScanner(context.applicationContext),
+    barcodeScanner: BarcodeScanner = GmsBarcodeScanner(context.applicationContext),
     productSource: ProductSource = OpenFoodFactsClient(USER_AGENT),
     val aaps: AapsHandoff = AndroidAapsHandoff(context.applicationContext),
 ) {
@@ -49,11 +51,13 @@ class AppContainer(
     val entries = EntryRepository(appData)
     val products = ProductRepository(appData, productSource)
     val backup = BackupRepository(appData, appContext.contentResolver)
+    val scanner = ScannerController(barcodeScanner, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
+    val libraries = LibraryCatalog(open = { appContext.resources.openRawResource(R.raw.aboutlibraries) })
 
     val viewModelFactory: ViewModelProvider.Factory = viewModelFactory {
-        initializer { CalculatorViewModel(createSavedStateHandle(), entries, products) }
+        initializer { CalculatorViewModel(createSavedStateHandle(), entries, products, scanner) }
         initializer { SavedViewModel(entries) }
-        initializer { SettingsViewModel(settings, backup) }
+        initializer { SettingsViewModel(settings, backup, scanner, libraries) }
     }
 
     private companion object {

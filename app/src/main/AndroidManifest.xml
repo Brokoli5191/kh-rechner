@@ -4,9 +4,19 @@
     <!-- Only used for the Open Food Facts lookup after a barcode scan. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Needed to see whether AAPS is installed and to open it (see AndroidAapsHandoff). -->
     <queries>
+        <!-- Needed to see whether AAPS is installed and to open it (see AndroidAapsHandoff). -->
         <package android:name="info.nightscout.androidaps" />
+
+        <!--
+            The code scanner library looks its camera screen up inside Google Play services before
+            every scan and reports "module not ready" if it cannot see it. Play services is visible
+            to all apps on stock devices; these entries make sure of it everywhere else.
+        -->
+        <package android:name="com.google.android.gms" />
+        <intent>
+            <action android:name="com.google.android.gms.mlkit.ACTION_SCAN_BARCODE" />
+        </intent>
     </queries>
 
     <application

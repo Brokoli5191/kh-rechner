@@ -55,6 +55,7 @@ import app.brokoli5191.khrechner.ui.calculator.CalculatorViewModel
 import app.brokoli5191.khrechner.ui.components.LocalDecimalSeparator
 import app.brokoli5191.khrechner.ui.saved.SavedScreen
 import app.brokoli5191.khrechner.ui.saved.SavedViewModel
+import app.brokoli5191.khrechner.ui.settings.LibrariesScreen
 import app.brokoli5191.khrechner.ui.settings.SettingsScreen
 import app.brokoli5191.khrechner.ui.settings.SettingsViewModel
 import app.brokoli5191.khrechner.ui.theme.AppMotion
@@ -72,28 +73,39 @@ enum class Destination(
     SETTINGS(R.string.nav_settings, R.drawable.ic_settings, R.drawable.ic_settings_filled),
 }
 
+/** Everything that can be on the back stack: the three tabs and the pages opened from them. */
+enum class Screen(val tab: Destination) {
+    CALCULATOR(Destination.CALCULATOR),
+    SAVED(Destination.SAVED),
+    SETTINGS(Destination.SETTINGS),
+
+    /** "verwendete bibliotheken", opened from the about section. */
+    LIBRARIES(Destination.SETTINGS),
+}
+
+private val Destination.root: Screen get() = Screen.valueOf(name)
+
 /**
- * The back stack is `[CALCULATOR]` or `[CALCULATOR, other]`: back from a tab returns to the
- * calculator (with the predictive back preview), back from the calculator leaves the app.
+ * The back stack is `[CALCULATOR]`, `[CALCULATOR, tab]` or that plus a page opened from the tab.
+ * Back closes the page, then returns to the calculator (with the predictive back preview), and
+ * from the calculator leaves the app. Choosing a tab always lands on the tab itself.
  */
-private fun SnapshotStateList<Destination>.switchTo(destination: Destination) {
-    when {
-        lastOrNull() == destination -> Unit
-        destination == Destination.CALCULATOR -> removeRange(1, size)
-        size > 1 -> this[1] = destination
-        else -> add(destination)
-    }
+private fun SnapshotStateList<Screen>.switchTo(tab: Destination) {
+    val target = tab.root
+    if (lastOrNull() == target) return
+    removeRange(1, size)
+    if (target != Screen.CALCULATOR) add(target)
 }
 
 @Composable
 fun KhRechnerApp(container: AppContainer, settings: Settings) {
     val backStack = rememberSaveable(
         saver = listSaver(
-            save = { stack -> stack.map(Destination::name) },
-            restore = { names -> names.map(Destination::valueOf).toMutableStateList() },
+            save = { stack -> stack.map(Screen::name) },
+            restore = { names -> names.map(Screen::valueOf).toMutableStateList() },
         ),
-    ) { mutableStateListOf(Destination.CALCULATOR) }
-    val current = backStack.last()
+    ) { mutableStateListOf(Screen.CALCULATOR) }
+    val current = backStack.last().tab
     // NavDisplay keeps the entries it built, so their content must read settings through state
     // instead of capturing the value they were created with.
     val currentSettings by rememberUpdatedState(settings)
@@ -110,8 +122,13 @@ fun KhRechnerApp(container: AppContainer, settings: Settings) {
     // Which way the next screen change travels; set just before the back stack changes.
     var direction by remember { mutableIntStateOf(1) }
     fun switchTo(destination: Destination) {
-        direction = if (destination.ordinal >= current.ordinal) 1 else -1
+        // Towards the end of the bar travels forwards; so does nothing, and closing a page goes back.
+        direction = if (destination.ordinal > current.ordinal) 1 else -1
         backStack.switchTo(destination)
+    }
+    fun open(screen: Screen) {
+        direction = 1
+        backStack.add(screen)
     }
 
     CompositionLocalProvider(LocalDecimalSeparator provides decimalSeparator) {
@@ -157,23 +174,31 @@ fun KhRechnerApp(container: AppContainer, settings: Settings) {
                 // Back always leads to the calculator, the first tab.
                 popTransitionSpec = { tabTransition(motion, direction = -1) },
                 predictivePopTransitionSpec = { tabTransition(motion, direction = -1) },
-                entryProvider = { destination ->
-                    NavEntry(destination) {
-                        when (destination) {
-                            Destination.CALCULATOR -> CalculatorScreen(
+                entryProvider = { screen ->
+                    NavEntry(screen) {
+                        when (screen) {
+                            Screen.CALCULATOR -> CalculatorScreen(
                                 viewModel = calculatorViewModel,
                                 carbUnit = currentSettings.carbUnit,
-                                scanner = container.scanner,
+                                canScan = container.scanner.isSupported,
                                 aaps = container.aaps,
                             )
-                            Destination.SAVED -> SavedScreen(
+                            Screen.SAVED -> SavedScreen(
                                 viewModel = savedViewModel,
                                 onOpen = { entry ->
                                     calculatorViewModel.load(entry)
                                     switchTo(Destination.CALCULATOR)
                                 },
                             )
-                            Destination.SETTINGS -> SettingsScreen(viewModel = settingsViewModel, settings = currentSettings)
+                            Screen.SETTINGS -> SettingsScreen(
+                                viewModel = settingsViewModel,
+                                settings = currentSettings,
+                                onOpenLibraries = { open(Screen.LIBRARIES) },
+                            )
+                            Screen.LIBRARIES -> LibrariesScreen(
+                                viewModel = settingsViewModel,
+                                onBack = { backStack.removeLastOrNull() },
+                            )
                         }
                     }
                 },
