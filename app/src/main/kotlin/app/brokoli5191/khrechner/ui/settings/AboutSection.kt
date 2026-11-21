@@ -241,7 +241,7 @@ private fun InstallFailure.message(): String = when (this) {
 }
 
 @Composable
-private fun LinkRow(
+internal fun LinkRow(
     icon: Int,
     title: String,
     summary: String?,

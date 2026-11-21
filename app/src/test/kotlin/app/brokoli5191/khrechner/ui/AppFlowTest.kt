@@ -29,14 +29,21 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.brokoli5191.khrechner.BuildConfig
 import app.brokoli5191.khrechner.TestApplication
+import app.brokoli5191.khrechner.data.DownloadResult
 import app.brokoli5191.khrechner.data.InstallFailure
+import app.brokoli5191.khrechner.data.InstallResult
 import app.brokoli5191.khrechner.data.InstallUpdate
 import app.brokoli5191.khrechner.data.ProductPieces
+import app.brokoli5191.khrechner.data.ReleaseInfo
+import app.brokoli5191.khrechner.data.ReleaseLookup
 import app.brokoli5191.khrechner.data.RemoteProduct
 import app.brokoli5191.khrechner.data.ScanResult
 import app.brokoli5191.khrechner.data.Settings
 import app.brokoli5191.khrechner.data.ThemeMode
+import app.brokoli5191.khrechner.data.UpdateFailure
 import app.brokoli5191.khrechner.ui.theme.KhRechnerTheme
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.first
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -415,14 +422,86 @@ class AppFlowTest {
         compose.onNode(hasText("INTERNAL_ERROR", substring = true)).assertDoesNotExist()
 
         app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.MeteredNetwork))
-        compose.onNodeWithText("nochmal").performClick()
+        compose.onNodeWithText("nochmal").performScrollTo().performClick()
         awaitText("der google-scanner wird nur über wlan geladen.")
 
         app.scanner.installUpdates = listOf(InstallUpdate.Done)
-        compose.onNodeWithText("nochmal").performClick()
+        compose.onNodeWithText("nochmal").performScrollTo().performClick()
         awaitText("google-scanner bereit")
         compose.onNodeWithText("nochmal").assertDoesNotExist()
         compose.onNode(hasText("die app scannt selbst", substring = true)).assertDoesNotExist()
+    }
+
+    private val newer = ReleaseInfo(
+        version = "9.1.0",
+        apkUrl = "https://github.com/Brokoli5191/kh-rechner/releases/download/v9.1.0/kh-rechner-9.1.0.apk",
+        apkSize = 4_400_000,
+        sha256 = null,
+        pageUrl = "https://github.com/Brokoli5191/kh-rechner/releases/tag/v9.1.0",
+    )
+
+    @Test
+    fun `the update section finds a newer version, marks the tab and installs it on request`() {
+        compose.onNodeWithText("einstellungen").performClick()
+        compose.onNodeWithText("updates").performScrollTo()
+        awaitText("noch nicht gesucht")
+        compose.onNodeWithContentDescription("update verfügbar").assertDoesNotExist()
+
+        // Nothing newer out there.
+        compose.onNodeWithText("suchen").performScrollTo().performClick()
+        awaitText("kh rechner ist aktuell")
+        awaitText("heute geprüft")
+
+        app.releases.answer = ReleaseLookup.Found(newer)
+        compose.onNodeWithText("suchen").performScrollTo().performClick()
+        awaitText("version 9.1.0 ist da")
+        compose.onNodeWithText("was ist neu").assertExists()
+        compose.onNodeWithContentDescription("update verfügbar").assertExists()
+
+        val gate = CompletableDeferred<Unit>()
+        app.updater.gate = gate
+        compose.onNodeWithText("installieren").performScrollTo().performClick()
+        awaitText("wird geladen … 40 %")
+        gate.complete(Unit)
+        awaitText("wird installiert …")
+        assertEquals(listOf(newer), app.updater.downloaded)
+        assertEquals(1, app.updater.installed.size)
+
+        // Android's dialog, closed with "cancel": the offer is back.
+        compose.runOnIdle {
+            app.container.updates.onInstallResult(InstallResult.Cancelled)
+        }
+        awaitText("installieren")
+    }
+
+    @Test
+    fun `a failed update says why in one sentence and offers to try again`() {
+        app.releases.answer = ReleaseLookup.Found(newer)
+        app.updater.downloadResult = DownloadResult.Failed(UpdateFailure.WRONG_SIGNATURE)
+        compose.onNodeWithText("einstellungen").performClick()
+        compose.onNodeWithText("updates").performScrollTo()
+        compose.onNodeWithText("suchen").performScrollTo().performClick()
+        compose.onNodeWithText("installieren").performScrollTo().performClick()
+        awaitText("das update ist anders signiert als die installierte app.")
+
+        app.updater.downloadResult = DownloadResult.Ready(java.io.File("ok.apk"))
+        compose.onNodeWithText("nochmal").performScrollTo().performClick()
+        awaitText("wird installiert …")
+    }
+
+    @Test
+    fun `looking on opening can be switched off`() {
+        compose.onNodeWithText("einstellungen").performClick()
+        compose.onNodeWithText("beim öffnen suchen").performScrollTo().performClick()
+        // The setting is written on a background thread; let the click land before asking for it.
+        compose.waitForIdle()
+        compose.waitUntil(5_000) {
+            kotlinx.coroutines.runBlocking { !app.container.settings.settings.first().checkForUpdates }
+        }
+        app.releases.answer = ReleaseLookup.Found(newer)
+        compose.runOnIdle { app.container.updates.checkIfDue() }
+        compose.waitForIdle()
+        assertEquals(0, app.releases.calls)
     }
 
     @Test

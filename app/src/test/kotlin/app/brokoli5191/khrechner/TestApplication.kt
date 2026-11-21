@@ -9,14 +9,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import app.brokoli5191.khrechner.data.AapsHandoff
+import app.brokoli5191.khrechner.data.AppUpdater
 import app.brokoli5191.khrechner.data.BarcodeScanner
+import app.brokoli5191.khrechner.data.DownloadResult
 import app.brokoli5191.khrechner.data.InstallUpdate
 import app.brokoli5191.khrechner.data.ProductSource
+import app.brokoli5191.khrechner.data.ReleaseInfo
+import app.brokoli5191.khrechner.data.ReleaseLookup
+import app.brokoli5191.khrechner.data.ReleaseSource
 import app.brokoli5191.khrechner.data.RemoteProduct
 import app.brokoli5191.khrechner.data.ScanResult
 import app.brokoli5191.khrechner.data.ScannerAvailability
 import app.brokoli5191.khrechner.ui.scanner.CameraEvent
 import app.brokoli5191.khrechner.ui.scanner.CameraScanner
+import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -28,8 +34,10 @@ class TestApplication : KhRechnerApplication() {
     val productSource = FakeProductSource()
     val aaps = FakeAaps()
     val camera = FakeCamera()
+    val releases = FakeReleases()
+    val updater = FakeUpdater()
 
-    override fun createContainer(): AppContainer = AppContainer(this, scanner, productSource, aaps, camera)
+    override fun createContainer(): AppContainer = AppContainer(this, scanner, productSource, aaps, camera, releases, updater)
 }
 
 class FakeAaps : AapsHandoff {
@@ -110,6 +118,39 @@ class FakeCamera : CameraScanner {
             onDispose { report = null }
         }
         picture(modifier)
+    }
+}
+
+/** GitHub as a test wants it: no release unless [answer] says otherwise. */
+class FakeReleases : ReleaseSource {
+    var answer: ReleaseLookup = ReleaseLookup.NoRelease
+    var calls = 0
+    override suspend fun latest(): ReleaseLookup {
+        calls++
+        return answer
+    }
+}
+
+/**
+ * Stands in for download and installer. A download reports 40 % and, if [gate] is set, waits for
+ * it before it ends with [downloadResult].
+ */
+class FakeUpdater : AppUpdater {
+    var downloadResult: DownloadResult = DownloadResult.Ready(File("kh-rechner-update.apk"))
+    var gate: CompletableDeferred<Unit>? = null
+    val downloaded = mutableListOf<ReleaseInfo>()
+    val installed = mutableListOf<File>()
+
+    override suspend fun download(release: ReleaseInfo, progress: (Int?) -> Unit): DownloadResult {
+        downloaded += release
+        progress(null)
+        progress(40)
+        gate?.await()
+        return downloadResult
+    }
+
+    override suspend fun install(apk: File) {
+        installed += apk
     }
 }
 

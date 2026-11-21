@@ -110,6 +110,36 @@
     <string name="settings_import_summary">load calculations from a json file</string>
     <string name="settings_version">version %1$s</string>
 
+    <!-- settings: updates -->
+    <string name="settings_updates">updates</string>
+    <string name="update_auto_check">check when opened</string>
+    <string name="update_auto_check_summary">asks github for a new version at most once a day</string>
+    <string name="update_title_unknown">not checked yet</string>
+    <string name="update_title_checking">checking for updates …</string>
+    <string name="update_title_current">kh rechner is up to date</string>
+    <string name="update_title_available">version %1$s is out</string>
+    <string name="update_title_failed">check failed</string>
+    <string name="update_summary_installed">version %1$s is installed.</string>
+    <string name="update_summary_current_today">version %1$s, checked today.</string>
+    <string name="update_summary_current">version %1$s, last checked on %2$s.</string>
+    <string name="update_summary_available">%1$s is installed, download %2$s. the app closes while installing.</string>
+    <string name="update_downloading">downloading …</string>
+    <string name="update_downloading_percent">downloading … %1$d %%</string>
+    <string name="update_installing">installing …</string>
+    <string name="update_failed_no_connection">no connection to github.</string>
+    <string name="update_failed_github">github is not answering right now.</string>
+    <string name="update_failed_no_apk">the newest release has no apk.</string>
+    <string name="update_failed_damaged">the downloaded file is damaged.</string>
+    <string name="update_failed_signature">the update is signed differently from the installed app.</string>
+    <string name="update_failed_storage">not enough storage for the update.</string>
+    <string name="update_failed_blocked">android blocked the installation.</string>
+    <string name="update_failed_install">the installation failed.</string>
+    <string name="update_release_notes">what\'s new</string>
+    <string name="update_release_notes_summary">version %1$s on github</string>
+    <string name="action_check">check</string>
+    <string name="action_install">install</string>
+    <string name="a11y_update_available">update available</string>
+
     <!-- settings: about -->
     <string name="settings_about">about</string>
     <string name="about_description">works out how many grams of carbohydrates you ate.</string>

@@ -51,6 +51,7 @@ enough.
 - Export everything to a JSON file and import it on another phone.
 - A second result line in KE (10 g) or BE (12 g), if you count in those.
 - Colours follow your wallpaper (Material You), in light and dark.
+- Updates itself from GitHub Releases when you tap install.
 
 <table>
   <tr>
@@ -74,7 +75,10 @@ colours, which you only see if you switch dynamic colours off.
    [latest release](https://github.com/Brokoli5191/kh-rechner/releases/latest).
 2. Open the file on your phone. Android asks once whether your browser or file manager may install
    apps.
-3. To update later, install the newer APK over the old one. Your saved calculations stay.
+3. Later versions come through the app. When you open it, it asks GitHub at most once a day
+   whether there is a newer release and shows it under einstellungen → updates. One tap installs
+   it. The first time, Android asks whether KH Rechner may install apps. Your saved calculations
+   stay.
 
 The app needs Android 13 or newer. For barcodes it uses Google's scanner if Google Play services
 can provide it. If not, it scans with its own, and asks for the camera permission the first time
@@ -94,8 +98,10 @@ dose anything by itself.
 
 A barcode scan sends the barcode number to Open Food Facts to look the product up. The app sends
 nothing else and has no account, no analytics and no ads. Its own scanner reads the camera picture
-on the phone and does not store it or send it anywhere. Saved calculations stay on the device, and
-in Android's own backup if you have that switched on.
+on the phone and does not store it or send it anywhere. Once a day, when you open the app, it asks
+GitHub whether there is a newer release. You can switch that off under einstellungen → updates,
+and the button there still works. Saved calculations stay on the device, and in Android's own
+backup if you have that switched on.
 
 ## Before you rely on it
 

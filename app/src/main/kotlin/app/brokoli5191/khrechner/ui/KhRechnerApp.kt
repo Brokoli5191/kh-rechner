@@ -1,5 +1,6 @@
 package app.brokoli5191.khrechner.ui
 
+import android.content.ActivityNotFoundException
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.ContentTransform
@@ -23,6 +24,8 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
@@ -30,6 +33,7 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -43,15 +47,22 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import app.brokoli5191.khrechner.AppContainer
 import app.brokoli5191.khrechner.R
+import app.brokoli5191.khrechner.data.InstallResult
 import app.brokoli5191.khrechner.data.Settings
+import app.brokoli5191.khrechner.data.UpdateController
+import app.brokoli5191.khrechner.data.UpdateFailure
+import app.brokoli5191.khrechner.data.UpdateStatus
 import app.brokoli5191.khrechner.ui.calculator.CalculatorScreen
 import app.brokoli5191.khrechner.ui.calculator.CalculatorViewModel
 import app.brokoli5191.khrechner.ui.components.LocalDecimalSeparator
@@ -123,6 +134,10 @@ fun KhRechnerApp(container: AppContainer, settings: Settings) {
     val decimalSeparator = remember(locale) { DecimalFormatSymbols.getInstance(locale).decimalSeparator }
 
     val motion = rememberAppMotion()
+    // Read inside the navigation bar only, so download progress does not recompose the whole app.
+    val updateStatus = container.updates.status.collectAsStateWithLifecycle()
+    UpdateConfirmations(container.updates)
+
     // Which way the next screen change travels; set just before the back stack changes.
     var direction by remember { mutableIntStateOf(1) }
     fun switchTo(destination: Destination) {
@@ -148,14 +163,25 @@ fun KhRechnerApp(container: AppContainer, settings: Settings) {
                                 selected = selected,
                                 onClick = { switchTo(destination) },
                                 icon = {
-                                    Icon(
-                                        painter = painterResource(if (selected) destination.selectedIcon else destination.icon),
-                                        contentDescription = null,
-                                        modifier = Modifier.graphicsLayer {
-                                            scaleX = iconScale
-                                            scaleY = iconScale
+                                    // A dot on the settings tab while a newer version waits there.
+                                    val updateWaiting = destination == Destination.SETTINGS && updateStatus.value is UpdateStatus.Available
+                                    BadgedBox(
+                                        badge = {
+                                            if (updateWaiting) {
+                                                val description = stringResource(R.string.a11y_update_available)
+                                                Badge(Modifier.semantics { contentDescription = description })
+                                            }
                                         },
-                                    )
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(if (selected) destination.selectedIcon else destination.icon),
+                                            contentDescription = null,
+                                            modifier = Modifier.graphicsLayer {
+                                                scaleX = iconScale
+                                                scaleY = iconScale
+                                            },
+                                        )
+                                    }
                                 },
                                 label = { Text(stringResource(destination.label)) },
                             )
@@ -210,6 +236,24 @@ fun KhRechnerApp(container: AppContainer, settings: Settings) {
                 )
             }
             CameraScannerOverlay(calculatorViewModel, container.camera)
+        }
+    }
+}
+
+/**
+ * Shows Android's "update this app?" dialog when the installer asks for it, wherever in the app
+ * the user is by then.
+ */
+@Composable
+private fun UpdateConfirmations(updates: UpdateController) {
+    val context = LocalContext.current
+    LaunchedEffect(updates, context) {
+        updates.confirmations.collect { intent ->
+            try {
+                context.startActivity(intent)
+            } catch (_: ActivityNotFoundException) {
+                updates.onInstallResult(InstallResult.Failed(UpdateFailure.INSTALL_FAILED))
+            }
         }
     }
 }

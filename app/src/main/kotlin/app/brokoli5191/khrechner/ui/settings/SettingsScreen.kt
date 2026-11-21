@@ -55,6 +55,7 @@ import app.brokoli5191.khrechner.data.ImportError
 import app.brokoli5191.khrechner.data.ImportMode
 import app.brokoli5191.khrechner.data.Settings
 import app.brokoli5191.khrechner.data.ThemeMode
+import app.brokoli5191.khrechner.data.UpdateStatus
 import app.brokoli5191.khrechner.domain.CarbUnit
 import app.brokoli5191.khrechner.ui.components.Choice
 import app.brokoli5191.khrechner.ui.components.ConnectedChoiceGroup
@@ -70,6 +71,7 @@ private const val ENGLISH = "en"
 fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings, onOpenLibraries: () -> Unit) {
     val pendingImport by viewModel.pendingImport.collectAsStateWithLifecycle()
     val scannerStatus by viewModel.scannerStatus.collectAsStateWithLifecycle()
+    val updateStatus by viewModel.updateStatus.collectAsStateWithLifecycle()
     val libraries by viewModel.libraries.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
 
@@ -114,9 +116,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings, onOpenLibra
     SettingsContent(
         settings = settings,
         scanner = ScannerInfo(scannerStatus, viewModel.cameraAvailable),
+        updateStatus = updateStatus,
         libraryCount = libraries.size,
         snackbar = snackbar,
         onInstallScanner = viewModel::installScanner,
+        onCheckForUpdate = viewModel::checkForUpdate,
+        onInstallUpdate = viewModel::installUpdate,
+        onAutoUpdateCheck = viewModel::setCheckForUpdates,
         onOpenLibraries = onOpenLibraries,
         onOpenLink = rememberLinkOpener(snackbar),
         onThemeMode = viewModel::setThemeMode,
@@ -141,9 +147,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, settings: Settings, onOpenLibra
 fun SettingsContent(
     settings: Settings,
     scanner: ScannerInfo,
+    updateStatus: UpdateStatus,
     libraryCount: Int,
     snackbar: SnackbarHostState,
     onInstallScanner: () -> Unit,
+    onCheckForUpdate: () -> Unit,
+    onInstallUpdate: () -> Unit,
+    onAutoUpdateCheck: (Boolean) -> Unit,
     onOpenLibraries: () -> Unit,
     onOpenLink: (String) -> Unit,
     onThemeMode: (ThemeMode) -> Unit,
@@ -256,10 +266,20 @@ fun SettingsContent(
                 )
             }
 
+            UpdateSection(
+                status = updateStatus,
+                autoCheck = settings.checkForUpdates,
+                index = 4,
+                onAutoCheck = onAutoUpdateCheck,
+                onCheck = onCheckForUpdate,
+                onInstall = onInstallUpdate,
+                onOpenLink = onOpenLink,
+            )
+
             AboutSection(
                 scanner = scanner,
                 libraryCount = libraryCount,
-                firstIndex = 4,
+                firstIndex = 5,
                 onInstallScanner = onInstallScanner,
                 onOpenLibraries = onOpenLibraries,
                 onOpenLink = onOpenLink,

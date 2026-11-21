@@ -20,7 +20,8 @@ The Gradle wrapper downloads Gradle and all libraries.
 ```
 
 The UI tests start the real app under Robolectric and click through it, so no emulator is needed.
-Both scanners, the network and AAPS are replaced by fakes in `TestApplication`.
+Both scanners, the network, GitHub, the package installer and AAPS are replaced by fakes in
+`TestApplication`.
 
 To re-render the pictures in `docs/screenshots`:
 
@@ -63,6 +64,25 @@ in one sentence. What Play services answered word for word is in logcat under th
 `BarcodeDecoder` holds the ZXing part and is plain JVM code. Its tests draw barcodes with ZXing's
 writer and feed them in as camera frames, upright and turned by a quarter. The camera itself is
 not covered by any test here, because there is none on the JVM.
+
+## Updates
+
+The app updates itself from GitHub Releases. When it comes to the front, `UpdateController` asks
+`api.github.com` for the latest release, at most once per calendar day and only while the switch
+is on. It compares the tag with the installed `versionName`. A newer release shows up under
+einstellungen → updates, with a dot on the tab.
+
+Nothing is installed until the user taps install. `PackageInstallerUpdater` downloads the APK and
+compares it with the SHA-256 GitHub lists for the asset. It then checks that the file is this
+app, newer than the installed one and signed with the same key, and only then hands it to
+`PackageInstaller`. The first time, Android asks for "install unknown apps" and for a
+confirmation. After that the app can update itself without a dialog, because it holds
+`UPDATE_PACKAGES_WITHOUT_USER_ACTION` and is updating itself (see
+`SessionParams.setRequireUserAction`). Android ends the app's process to replace it.
+
+A debug build cannot update itself to a release, because the two are signed with different keys.
+The update section then says that the signature does not match. The release workflow already
+produces what the updater expects: a tag `vX.Y.Z` and one `.apk` attached to the release.
 
 ## Releases
 

@@ -120,6 +120,36 @@
     <string name="settings_import_summary">berechnungen aus einer json-datei laden</string>
     <string name="settings_version">version %1$s</string>
 
+    <!-- settings: updates -->
+    <string name="settings_updates">updates</string>
+    <string name="update_auto_check">beim öffnen suchen</string>
+    <string name="update_auto_check_summary">fragt github höchstens einmal am tag nach einer neuen version</string>
+    <string name="update_title_unknown">noch nicht gesucht</string>
+    <string name="update_title_checking">suche nach updates …</string>
+    <string name="update_title_current">kh rechner ist aktuell</string>
+    <string name="update_title_available">version %1$s ist da</string>
+    <string name="update_title_failed">suche fehlgeschlagen</string>
+    <string name="update_summary_installed">installiert ist version %1$s.</string>
+    <string name="update_summary_current_today">version %1$s, heute geprüft.</string>
+    <string name="update_summary_current">version %1$s, zuletzt geprüft am %2$s.</string>
+    <string name="update_summary_available">installiert ist %1$s, download %2$s. die app schließt sich dabei.</string>
+    <string name="update_downloading">wird geladen …</string>
+    <string name="update_downloading_percent">wird geladen … %1$d %%</string>
+    <string name="update_installing">wird installiert …</string>
+    <string name="update_failed_no_connection">keine verbindung zu github.</string>
+    <string name="update_failed_github">github antwortet gerade nicht.</string>
+    <string name="update_failed_no_apk">das neueste release hat keine apk.</string>
+    <string name="update_failed_damaged">die heruntergeladene datei ist beschädigt.</string>
+    <string name="update_failed_signature">das update ist anders signiert als die installierte app.</string>
+    <string name="update_failed_storage">zu wenig speicher für das update.</string>
+    <string name="update_failed_blocked">android hat die installation blockiert.</string>
+    <string name="update_failed_install">die installation ist fehlgeschlagen.</string>
+    <string name="update_release_notes">was ist neu</string>
+    <string name="update_release_notes_summary">version %1$s auf github</string>
+    <string name="action_check">suchen</string>
+    <string name="action_install">installieren</string>
+    <string name="a11y_update_available">update verfügbar</string>
+
     <!-- settings: about -->
     <string name="settings_about">über</string>
     <string name="about_description">rechnet aus, wie viele gramm kohlenhydrate du gegessen hast.</string>
