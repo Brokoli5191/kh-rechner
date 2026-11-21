@@ -48,9 +48,7 @@
     <string name="error_not_positive">muss größer als 0 sein</string>
     <string name="error_not_whole">nur ganze zahlen</string>
     <string name="error_above_100">höchstens 100 g pro 100 g</string>
-    <string name="error_exceeds_percent">mehr als 100 %</string>
-    <string name="error_exceeds_pieces">mehr stücke als vorhanden</string>
-    <string name="error_exceeds_grams">mehr als das gesamtgewicht</string>
+    <string name="eaten_more_than_package">mehr als eine packung: %1$s packungen</string>
     <string name="error_needs_total_weight">dafür fehlt das gesamtgewicht</string>
     <string name="error_needs_piece_weight">dafür fehlen gesamtgewicht und stückzahl</string>
 

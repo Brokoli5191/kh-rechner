@@ -19,8 +19,6 @@ enum class CalcError {
     NOT_WHOLE,
     /** More than 100 g of carbohydrates in 100 g of food. */
     ABOVE_100,
-    /** More eaten than there is: over 100 %, more pieces than exist, more grams than the total. */
-    EXCEEDS_TOTAL,
     /** Percent was entered but there is no total weight to take the percentage of. */
     NEEDS_TOTAL_WEIGHT,
     /** Pieces were entered but grams per piece is unknown. */
@@ -126,10 +124,9 @@ object CarbCalculator {
             }
         }
 
-        val exceedsTotal = eatenGrams != null && totalWeight != null && eatenGrams > totalWeight
-        if (exceedsTotal && source != null) errors[source.field] = CalcError.EXCEEDS_TOTAL
-
-        val carbsEaten = if (carbsPer100 != null && eatenGrams != null && !exceedsTotal) {
+        // More than the package (150 %, 30 of 20 pieces) is allowed: someone may have eaten one and a half
+        // packages and scanned only one. The screen points it out instead of refusing it.
+        val carbsEaten = if (carbsPer100 != null && eatenGrams != null) {
             carbsPer100 * eatenGrams / Fraction.HUNDRED
         } else {
             null

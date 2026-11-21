@@ -130,11 +130,15 @@ class AppFlowTest {
         field("gegessen in g").assertTextContains("150")
         field("gegessen in prozent").assertTextContains("75")
 
-        // More than there is: inline error, no result, no crash.
-        field("gegessen in prozent").performTextReplacement("120")
-        awaitResult("noch kein ergebnis")
-        compose.onNodeWithText("gegessen in prozent: mehr als 100 %").assertExists()
-        compose.onNodeWithText("speichern").assertIsNotEnabled()
+        // More than there is (one and a half packages scanned once) counts, with a note that says so.
+        field("gegessen in prozent").performTextReplacement("150")
+        awaitResult("30 gramm kohlenhydrate")
+        compose.onNodeWithText("mehr als eine packung: 1,5 packungen").assertExists()
+        field("gegessen in stücken").assertTextContains("6")
+        compose.onNodeWithText("speichern").assertIsEnabled()
+
+        field("gegessen in prozent").performTextReplacement("100")
+        compose.onNode(hasText("mehr als eine packung", substring = true)).assertDoesNotExist()
     }
 
     @Test

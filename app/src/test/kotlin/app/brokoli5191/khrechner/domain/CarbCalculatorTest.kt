@@ -197,30 +197,28 @@ class CarbCalculatorTest {
     // --- nonsense is rejected, never thrown -------------------------------------------------
 
     @Test
-    fun `more than 100 percent is an inline error and gives no result`() {
-        val result = CarbCalculator.calculate(
-            CalcInput(carbsPer100 = "10", totalWeight = "100", eatenSource = EatenSource.PERCENT, eatenValue = "120"),
+    fun `more than the package is allowed, from any of the three fields`() {
+        // One and a half packages, scanned once.
+        val percent = CarbCalculator.calculate(
+            CalcInput(carbsPer100 = "10", totalWeight = "100", pieceCount = "4", eatenSource = EatenSource.PERCENT, eatenValue = "150"),
         )
-        assertEquals(mapOf(CalcField.EATEN_PERCENT to CalcError.EXCEEDS_TOTAL), result.errors)
-        assertNull(result.carbsEaten)
-    }
+        assertTrue(percent.errors.isEmpty())
+        assertEquals("15", shown(percent.carbsEaten))
+        assertEquals("150", shown(percent.eatenGrams))
+        assertEquals("6", shown(percent.eatenPieces))
 
-    @Test
-    fun `more grams than the total weight is flagged on the grams field`() {
-        val result = CarbCalculator.calculate(
+        val pieces = CarbCalculator.calculate(
+            CalcInput(carbsPer100 = "10", totalWeight = "100", pieceCount = "4", eatenSource = EatenSource.PIECES, eatenValue = "6"),
+        )
+        assertTrue(pieces.errors.isEmpty())
+        assertEquals("15", shown(pieces.carbsEaten))
+        assertEquals("150", shown(pieces.eatenPercent))
+
+        val grams = CarbCalculator.calculate(
             CalcInput(carbsPer100 = "10", totalWeight = "100", eatenSource = EatenSource.GRAMS, eatenValue = "100.1"),
         )
-        assertEquals(mapOf(CalcField.EATEN_GRAMS to CalcError.EXCEEDS_TOTAL), result.errors)
-        assertNull(result.carbsEaten)
-    }
-
-    @Test
-    fun `more pieces than exist is flagged on the pieces field`() {
-        val result = CarbCalculator.calculate(
-            CalcInput(carbsPer100 = "10", totalWeight = "100", pieceCount = "4", eatenSource = EatenSource.PIECES, eatenValue = "5"),
-        )
-        assertEquals(mapOf(CalcField.EATEN_PIECES to CalcError.EXCEEDS_TOTAL), result.errors)
-        assertNull(result.carbsEaten)
+        assertTrue(grams.errors.isEmpty())
+        assertEquals("≈ 10", shown(grams.carbsEaten))
     }
 
     @Test
