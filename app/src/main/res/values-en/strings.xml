@@ -66,7 +66,18 @@
     <string name="lookup_not_found">product not found. please enter the value yourself.</string>
     <string name="lookup_no_carbs">no carb value on record for “%1$s”.</string>
     <string name="lookup_offline">no connection. please enter the value yourself.</string>
-    <string name="lookup_scanner_unavailable">the scanner is not ready yet. please try again in a moment.</string>
+
+    <!-- barcode scanner: one-off module download and failures -->
+    <string name="scanner_installing">downloading the scanner …</string>
+    <string name="scanner_installing_percent">downloading the scanner … %1$d %%</string>
+    <string name="scanner_still_installing">the scanner is still downloading. tap the icon again in a moment.</string>
+    <string name="scanner_install_failed_metered">the scanner is only downloaded over wi-fi. connect to a wi-fi network and try again.</string>
+    <string name="scanner_install_failed_storage">not enough storage to download the scanner.</string>
+    <string name="scanner_install_failed_other">the scanner could not be downloaded (error %1$d).</string>
+    <string name="scan_failed_not_ready">the scanner is downloaded but does not start yet. please try again in a moment.</string>
+    <string name="scan_failed_play_services">google play services is too old for the scanner. please update it.</string>
+    <string name="scan_failed_camera">google play services needs the camera permission to scan.</string>
+    <string name="scan_failed_other">scanning failed (error %1$d).</string>
 
     <!-- saved -->
     <string name="saved_empty">nothing saved yet</string>
@@ -99,6 +110,38 @@
     <string name="settings_import">import</string>
     <string name="settings_import_summary">load calculations from a json file</string>
     <string name="settings_version">version %1$s</string>
+
+    <!-- settings: about -->
+    <string name="settings_about">about</string>
+    <string name="about_description">works out how many grams of carbohydrates you ate.</string>
+    <string name="about_scanner">barcode scanner</string>
+    <string name="scanner_status_unsupported">not available because google play services is missing</string>
+    <string name="scanner_status_checking">checking …</string>
+    <string name="scanner_status_ready">ready</string>
+    <string name="scanner_status_not_installed">not downloaded yet</string>
+    <string name="scanner_status_installing">downloading …</string>
+    <string name="scanner_status_installing_percent">downloading … %1$d %%</string>
+    <string name="action_load">download</string>
+    <string name="action_retry">retry</string>
+    <string name="action_back">back</string>
+    <string name="about_source">source code</string>
+    <string name="about_libraries">libraries used</string>
+    <plurals name="about_libraries_count">
+        <item quantity="one">%1$d open-source project</item>
+        <item quantity="other">%1$d open-source projects</item>
+    </plurals>
+    <string name="about_licence">licence</string>
+    <string name="about_licence_summary">public domain (unlicense)</string>
+    <string name="about_product_data">product data</string>
+    <string name="about_product_data_summary">open food facts, open database license</string>
+    <string name="about_report">report a problem</string>
+    <string name="about_report_summary">open an issue on github</string>
+    <string name="about_disclaimer">kh rechner is a calculator, not a medical device. check the result before you dose insulin on it.</string>
+    <plurals name="library_modules">
+        <item quantity="one">%1$d module</item>
+        <item quantity="other">%1$d modules</item>
+    </plurals>
+    <string name="link_failed">no browser found that can open the link</string>
 
     <!-- settings: export and import -->
     <plurals name="export_done">

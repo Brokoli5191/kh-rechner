@@ -8,6 +8,10 @@ import app.brokoli5191.khrechner.data.BackupRepository
 import app.brokoli5191.khrechner.data.ImportError
 import app.brokoli5191.khrechner.data.ImportMode
 import app.brokoli5191.khrechner.data.ImportOutcome
+import app.brokoli5191.khrechner.data.LibraryCatalog
+import app.brokoli5191.khrechner.data.LibraryGroup
+import app.brokoli5191.khrechner.data.ScannerController
+import app.brokoli5191.khrechner.data.ScannerStatus
 import app.brokoli5191.khrechner.data.Settings
 import app.brokoli5191.khrechner.data.SettingsRepository
 import app.brokoli5191.khrechner.data.ThemeMode
@@ -16,9 +20,12 @@ import java.io.IOException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** One-off outcomes the screen reports in a snackbar. */
@@ -32,7 +39,19 @@ sealed interface SettingsEvent {
 class SettingsViewModel(
     private val settings: SettingsRepository,
     private val backup: BackupRepository,
+    private val scanner: ScannerController,
+    libraries: LibraryCatalog,
 ) : ViewModel() {
+
+    val scannerStatus: StateFlow<ScannerStatus> = scanner.status
+
+    /** Read once from the bundled list; empty until then. */
+    val libraries: StateFlow<List<LibraryGroup>> = flow { emit(libraries.load()) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun installScanner() = scanner.install()
+
+    fun refreshScanner() = scanner.refresh()
 
     /** A validated import waiting for the user to choose between merging and replacing. */
     private val _pendingImport = MutableStateFlow<AppData?>(null)

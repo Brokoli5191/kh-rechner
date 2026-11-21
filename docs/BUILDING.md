@@ -40,6 +40,10 @@ One module, `:app`, package `app.brokoli5191.khrechner`.
 
 `AppContainer` wires these together by hand.
 
+The list behind "verwendete bibliotheken" is not maintained by hand. The AboutLibraries Gradle
+plugin writes every dependency with its licence to `res/raw/aboutlibraries.json` during the build,
+and `LibraryCatalog` reads that file.
+
 ## Releases
 
 A release is a signed APK attached to a GitHub Release with generated notes. Version `1.2.3`

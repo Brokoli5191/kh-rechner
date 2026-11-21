@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.aboutlibraries)
 }
 
 // The release workflow passes -PappVersionName=<tag without "v">; local builds use the default.
@@ -83,6 +84,21 @@ android {
         checkReleaseBuilds = false
         // The app's copy is lowercase by design, including "cancel".
         disable += "ButtonCase"
+    }
+}
+
+// Writes res/raw/aboutlibraries.json at build time: every dependency with its licence, read by the
+// "verwendete bibliotheken" screen. Licence texts are linked, not bundled, and nothing is fetched.
+aboutLibraries {
+    offlineMode = true
+    library {
+        // One entry per project instead of one per artifact (Compose alone ships dozens).
+        duplicationMode = com.mikepenz.aboutlibraries.plugin.DuplicateMode.MERGE
+        duplicationRule = com.mikepenz.aboutlibraries.plugin.DuplicateRule.GROUP
+    }
+    export {
+        // Only what the screen shows: name, version, licence, website.
+        excludeFields.addAll("generated", "funding", "description", "scm", "organization", "developers", "License.content")
     }
 }
 

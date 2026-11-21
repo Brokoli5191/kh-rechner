@@ -11,7 +11,7 @@ open class KhRechnerApplication : Application() {
         super.onCreate()
         container = createContainer()
         // Fetch the barcode scanner module in the background so the first scan does not have to.
-        container.scanner.requestModule()
+        container.scanner.install()
     }
 
     /** Tests override this to swap the scanner and the network for fakes. */

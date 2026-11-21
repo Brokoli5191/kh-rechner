@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.brokoli5191.khrechner.TestApplication
+import app.brokoli5191.khrechner.data.InstallUpdate
 import app.brokoli5191.khrechner.data.RemoteProduct
 import app.brokoli5191.khrechner.data.ScanResult
 import app.brokoli5191.khrechner.data.Settings
@@ -24,6 +25,7 @@ import app.brokoli5191.khrechner.domain.EatenSource
 import app.brokoli5191.khrechner.ui.theme.KhRechnerTheme
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
@@ -155,5 +157,34 @@ class ScreenshotTest {
         compose.onNodeWithText("einstellungen").performClick()
         awaitText("darstellung")
         capture("settings")
+    }
+
+    @Test
+    fun about() {
+        launch()
+        compose.onNodeWithText("einstellungen").performClick()
+        compose.onNode(hasText("kein medizinprodukt", substring = true)).performScrollTo()
+        awaitText("bereit")
+        capture("settings-about")
+
+        compose.onNodeWithText("verwendete bibliotheken").performClick()
+        awaitText("androidx.activity")
+        capture("libraries")
+    }
+
+    /** The scanner module still downloading, as seen right after installing the app. */
+    @Test
+    fun aboutWhileScannerDownloads() {
+        app.scanner.installed = false
+        app.scanner.installUpdates = listOf(InstallUpdate.Progress(40), InstallUpdate.Done)
+        app.scanner.installGate = CompletableDeferred()
+        launch()
+        compose.onNodeWithText("einstellungen").performClick()
+        compose.onNodeWithText("barcode-scanner").performScrollTo()
+        awaitText("noch nicht geladen")
+        compose.onNodeWithText("laden").performClick()
+        awaitText("wird geladen … 40 %")
+        compose.onNode(hasText("kein medizinprodukt", substring = true)).performScrollTo()
+        capture("settings-about-downloading")
     }
 }
