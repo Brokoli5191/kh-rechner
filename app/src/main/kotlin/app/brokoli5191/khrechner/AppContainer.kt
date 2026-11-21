@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import app.brokoli5191.khrechner.data.AapsHandoff
+import app.brokoli5191.khrechner.data.AndroidAapsHandoff
 import app.brokoli5191.khrechner.data.AppData
 import app.brokoli5191.khrechner.data.BackupRepository
 import app.brokoli5191.khrechner.data.BarcodeScanner
@@ -26,13 +28,14 @@ import kotlinx.coroutines.SupervisorJob
 /**
  * Manual dependency wiring. One instance lives in [KhRechnerApplication].
  *
- * The two parameters with defaults are the app's only doors to the outside world (Google Play
- * services and the network); tests pass fakes for them.
+ * The parameters with defaults are the app's only doors to the outside world (Google Play
+ * services, the network, AAPS); tests pass fakes for them.
  */
 class AppContainer(
     context: Context,
     val scanner: BarcodeScanner = GmsBarcodeScanner(context.applicationContext),
     productSource: ProductSource = OpenFoodFactsClient(USER_AGENT),
+    val aaps: AapsHandoff = AndroidAapsHandoff(context.applicationContext),
 ) {
 
     private val appContext = context.applicationContext

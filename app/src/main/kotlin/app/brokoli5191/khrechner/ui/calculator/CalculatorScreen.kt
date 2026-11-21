@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -44,6 +45,7 @@ import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
@@ -103,8 +105,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.brokoli5191.khrechner.R
+import app.brokoli5191.khrechner.data.AapsHandoff
 import app.brokoli5191.khrechner.data.BarcodeScanner
 import app.brokoli5191.khrechner.domain.CalcError
 import app.brokoli5191.khrechner.domain.CalcField
@@ -128,6 +132,7 @@ fun CalculatorScreen(
     viewModel: CalculatorViewModel,
     carbUnit: CarbUnit,
     scanner: BarcodeScanner,
+    aaps: AapsHandoff,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -138,13 +143,35 @@ fun CalculatorScreen(
     val context = LocalContext.current
     var showSaveDialog by rememberSaveable { mutableStateOf(false) }
 
+    // AAPS can be installed or removed while this app is in the background.
+    var aapsInstalled by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(aaps) {
+        aapsInstalled = aaps.isInstalled()
+        onPauseOrDispose { }
+    }
+
     CalculatorContent(
         state = state,
         fields = viewModel.fields,
         carbUnit = carbUnit,
         snackbar = snackbar,
         canScan = scanner.isSupported,
+        showAaps = aapsInstalled,
         onScan = { scope.launch { viewModel.onScanResult(scanner.scan(context)) } },
+        onSendToAaps = {
+            state.wholeGrams?.let { grams ->
+                // Clipboard first, then AAPS on top; the user pastes and confirms over there.
+                aaps.copyAndOpen(grams)
+                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                scope.launch {
+                    snackbar.currentSnackbarData?.dismiss()
+                    snackbar.showSnackbar(
+                        message = resources.getString(R.string.snackbar_aaps_copied, grams),
+                        duration = SnackbarDuration.Long,
+                    )
+                }
+            }
+        },
         onApplyWeight = viewModel::applySuggestedWeight,
         onClearProduct = viewModel::clearProduct,
         onSave = { showSaveDialog = true },
@@ -195,7 +222,9 @@ fun CalculatorContent(
     carbUnit: CarbUnit,
     snackbar: SnackbarHostState,
     canScan: Boolean,
+    showAaps: Boolean,
     onScan: () -> Unit,
+    onSendToAaps: () -> Unit,
     onApplyWeight: () -> Unit,
     onClearProduct: () -> Unit,
     onSave: () -> Unit,
@@ -237,7 +266,10 @@ fun CalculatorContent(
                 compact = imeVisible,
                 canSave = state.canSave,
                 canReset = state.hasInput || state.product != null,
+                aapsGrams = state.wholeGrams.takeIf { showAaps },
+                showAaps = showAaps,
                 onSave = onSave,
+                onSendToAaps = onSendToAaps,
                 onReset = onReset,
                 motion = motion,
             )
@@ -396,7 +428,7 @@ private val TileHeightRoomy = 84.dp
 private val TilePaddingCompact = 10.dp
 
 /** Windows at least this tall get the roomy tiles while the keyboard is down. */
-private val RoomyFromHeight = 700.dp
+private val RoomyFromHeight = 760.dp
 private val TileOuterCorner = 24.dp
 private val TileInnerCorner = 6.dp
 
@@ -661,7 +693,10 @@ private fun ResultPanel(
     compact: Boolean,
     canSave: Boolean,
     canReset: Boolean,
+    aapsGrams: Int?,
+    showAaps: Boolean,
     onSave: () -> Unit,
+    onSendToAaps: () -> Unit,
     onReset: () -> Unit,
     motion: AppMotion,
 ) {
@@ -720,87 +755,164 @@ private fun ResultPanel(
                 }
             }
             Popping(visible = !compact, motion = motion) {
-                ActionButtons(canSave = canSave, canReset = canReset, onSave = onSave, onReset = onReset)
+                ActionButtons(
+                    canSave = canSave,
+                    canReset = canReset,
+                    aapsGrams = aapsGrams,
+                    showAaps = showAaps,
+                    onSave = onSave,
+                    onSendToAaps = onSendToAaps,
+                    onReset = onReset,
+                )
             }
         }
     }
 }
 
-/** Expressive button group: the pressed button grows, its neighbour gives way, both morph shape. */
+/**
+ * Expressive button group: the pressed button grows, its neighbour gives way, both morph shape.
+ *
+ * Normally "save" shares the row with "reset". With AAPS installed, the hand-off takes that place
+ * next to "save" and "reset" moves to a quieter row of its own, so all three stay one tap away on
+ * narrow phones too.
+ *
+ * @param aapsGrams the amount the AAPS button would hand over, or null while there is no result.
+ */
 @Composable
-private fun ActionButtons(canSave: Boolean, canReset: Boolean, onSave: () -> Unit, onReset: () -> Unit) {
+private fun ActionButtons(
+    canSave: Boolean,
+    canReset: Boolean,
+    aapsGrams: Int?,
+    showAaps: Boolean,
+    onSave: () -> Unit,
+    onSendToAaps: () -> Unit,
+    onReset: () -> Unit,
+) {
     val height = ButtonDefaults.MediumContainerHeight
     val saveLabel = stringResource(R.string.action_save)
     val resetLabel = stringResource(R.string.action_reset)
-    ButtonGroup(
-        overflowIndicator = { menuState -> ButtonGroupDefaults.OverflowIndicator(menuState) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 12.dp),
-        // More give than the default, so the squeeze between the two buttons is clearly visible.
-        expandedRatio = 0.25f,
-    ) {
-        customItem(
-            buttonGroupContent = {
-                val interactionSource = remember { MutableInteractionSource() }
-                Button(
-                    onClick = onSave,
-                    shapes = ButtonDefaults.shapesFor(height),
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = height)
-                        .animateWidth(interactionSource),
-                    enabled = canSave,
-                    contentPadding = ButtonDefaults.contentPaddingFor(height),
-                    interactionSource = interactionSource,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_bookmark_add),
-                        contentDescription = null,
-                        modifier = Modifier.size(ButtonDefaults.iconSizeFor(height)),
+    // The label states the rounding: "13 g an aaps" is exactly what lands on the clipboard.
+    val aapsLabel = aapsGrams?.let { stringResource(R.string.action_send_aaps_amount, it) }
+        ?: stringResource(R.string.action_send_aaps)
+    // Nothing to paste for no result or for zero grams.
+    val canSend = aapsGrams != null && aapsGrams > 0
+    // Two equally wide buttons need slimmer padding to keep icon and label on one line.
+    val padding = if (showAaps) PaddingValues(horizontal = 16.dp) else ButtonDefaults.contentPaddingFor(height)
+
+    Column {
+        ButtonGroup(
+            overflowIndicator = { menuState -> ButtonGroupDefaults.OverflowIndicator(menuState) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = if (showAaps) 4.dp else 12.dp),
+            // More give than the default, so the squeeze between the two buttons is clearly visible.
+            expandedRatio = 0.25f,
+        ) {
+            customItem(
+                buttonGroupContent = {
+                    val interactionSource = remember { MutableInteractionSource() }
+                    Button(
+                        onClick = onSave,
+                        shapes = ButtonDefaults.shapesFor(height),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = height)
+                            .animateWidth(interactionSource),
+                        enabled = canSave,
+                        contentPadding = padding,
+                        interactionSource = interactionSource,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_bookmark_add),
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.iconSizeFor(height)),
+                        )
+                        Spacer(Modifier.width(ButtonDefaults.iconSpacingFor(height)))
+                        Text(saveLabel, style = ButtonDefaults.textStyleFor(height), maxLines = 1)
+                    }
+                },
+                menuContent = { menuState ->
+                    DropdownMenuItem(
+                        text = { Text(saveLabel) },
+                        onClick = {
+                            menuState.dismiss()
+                            onSave()
+                        },
+                        enabled = canSave,
                     )
-                    Spacer(Modifier.width(ButtonDefaults.iconSpacingFor(height)))
-                    Text(saveLabel, style = ButtonDefaults.textStyleFor(height), maxLines = 1)
-                }
-            },
-            menuContent = { menuState ->
-                DropdownMenuItem(
-                    text = { Text(saveLabel) },
-                    onClick = {
-                        menuState.dismiss()
-                        onSave()
+                },
+            )
+            if (showAaps) {
+                customItem(
+                    buttonGroupContent = {
+                        val interactionSource = remember { MutableInteractionSource() }
+                        FilledTonalButton(
+                            onClick = onSendToAaps,
+                            shapes = ButtonDefaults.shapesFor(height),
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = height)
+                                .animateWidth(interactionSource),
+                            enabled = canSend,
+                            contentPadding = padding,
+                            interactionSource = interactionSource,
+                        ) {
+                            Text(aapsLabel, style = ButtonDefaults.textStyleFor(height), maxLines = 1)
+                        }
                     },
-                    enabled = canSave,
-                )
-            },
-        )
-        customItem(
-            buttonGroupContent = {
-                val interactionSource = remember { MutableInteractionSource() }
-                TextButton(
-                    onClick = onReset,
-                    shapes = ButtonDefaults.shapesFor(height),
-                    modifier = Modifier
-                        .heightIn(min = height)
-                        .animateWidth(interactionSource),
-                    enabled = canReset,
-                    contentPadding = ButtonDefaults.contentPaddingFor(height),
-                    interactionSource = interactionSource,
-                ) {
-                    Text(resetLabel, style = ButtonDefaults.textStyleFor(height), maxLines = 1)
-                }
-            },
-            menuContent = { menuState ->
-                DropdownMenuItem(
-                    text = { Text(resetLabel) },
-                    onClick = {
-                        menuState.dismiss()
-                        onReset()
+                    menuContent = { menuState ->
+                        DropdownMenuItem(
+                            text = { Text(aapsLabel) },
+                            onClick = {
+                                menuState.dismiss()
+                                onSendToAaps()
+                            },
+                            enabled = canSend,
+                        )
                     },
-                    enabled = canReset,
                 )
-            },
-        )
+            } else {
+                customItem(
+                    buttonGroupContent = {
+                        val interactionSource = remember { MutableInteractionSource() }
+                        TextButton(
+                            onClick = onReset,
+                            shapes = ButtonDefaults.shapesFor(height),
+                            modifier = Modifier
+                                .heightIn(min = height)
+                                .animateWidth(interactionSource),
+                            enabled = canReset,
+                            contentPadding = padding,
+                            interactionSource = interactionSource,
+                        ) {
+                            Text(resetLabel, style = ButtonDefaults.textStyleFor(height), maxLines = 1)
+                        }
+                    },
+                    menuContent = { menuState ->
+                        DropdownMenuItem(
+                            text = { Text(resetLabel) },
+                            onClick = {
+                                menuState.dismiss()
+                                onReset()
+                            },
+                            enabled = canReset,
+                        )
+                    },
+                )
+            }
+        }
+        if (showAaps) {
+            TextButton(
+                onClick = onReset,
+                shapes = ButtonDefaults.shapes(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
+                enabled = canReset,
+            ) {
+                Text(resetLabel)
+            }
+        }
     }
 }
 

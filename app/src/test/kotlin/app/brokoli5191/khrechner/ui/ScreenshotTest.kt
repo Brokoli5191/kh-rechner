@@ -105,6 +105,15 @@ class ScreenshotTest {
         capture("calculator-material-you")
     }
 
+    /** With AAPS on the device, the hand-off sits next to "save" and "reset" gets its own row. */
+    @Test
+    fun calculatorWithAaps() {
+        app.aaps.installed = true
+        launch()
+        fillExample()
+        capture("calculator-aaps")
+    }
+
     /** Not captured: the JVM renderer sizes dialog windows differently from a device. */
     @Test
     fun saveDialog() {

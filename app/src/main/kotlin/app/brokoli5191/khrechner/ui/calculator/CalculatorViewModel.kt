@@ -71,6 +71,8 @@ data class CalculatorUiState(
     /** Display text for values the app computed: grams per piece and the non-source "eaten" fields. */
     val derived: Map<CalcField, DisplayNumber> = emptyMap(),
     val carbsEaten: DisplayNumber? = null,
+    /** The result in whole grams, as handed to AAPS. */
+    val wholeGrams: Int? = null,
     val product: ProductInfo? = null,
     val lookup: LookupStatus = LookupStatus.Idle,
     val hasInput: Boolean = false,
@@ -160,6 +162,7 @@ class CalculatorViewModel(
                 result = result,
                 derived = derived,
                 carbsEaten = result.carbsEaten?.let(DecimalText::format),
+                wholeGrams = result.carbsEaten?.let(DecimalText::roundToWhole),
                 hasInput = !input.isBlank,
             )
         }

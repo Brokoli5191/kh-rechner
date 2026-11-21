@@ -53,6 +53,11 @@
     <string name="snackbar_saved">saved</string>
     <string name="snackbar_reset">reset</string>
 
+    <!-- calculator: hand-off to aaps -->
+    <string name="action_send_aaps">to aaps</string>
+    <string name="action_send_aaps_amount">%1$d g to aaps</string>
+    <string name="snackbar_aaps_copied">%1$d g copied, paste in aaps</string>
+
     <!-- calculator: barcode -->
     <string name="action_scan">scan barcode</string>
     <string name="action_remove_product">remove product</string>

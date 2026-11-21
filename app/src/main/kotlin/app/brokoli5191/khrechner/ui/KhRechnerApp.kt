@@ -164,6 +164,7 @@ fun KhRechnerApp(container: AppContainer, settings: Settings) {
                                 viewModel = calculatorViewModel,
                                 carbUnit = currentSettings.carbUnit,
                                 scanner = container.scanner,
+                                aaps = container.aaps,
                             )
                             Destination.SAVED -> SavedScreen(
                                 viewModel = savedViewModel,

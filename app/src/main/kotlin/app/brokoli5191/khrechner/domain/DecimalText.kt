@@ -43,6 +43,9 @@ object DecimalText {
         return DisplayNumber(plain(rounded), isApproximate = Fraction.of(rounded) != value)
     }
 
+    /** [value] rounded half up to a whole number, e.g. grams for apps that take no decimals. */
+    fun roundToWhole(value: Fraction): Int = value.toBigDecimal(0).intValueExact()
+
     /**
      * Canonical form of user input ("1,50" -> "1.5"). Text that is not a valid non-negative number
      * is returned trimmed and otherwise untouched, so nothing the user typed is silently lost.

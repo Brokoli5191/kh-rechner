@@ -61,6 +61,11 @@
     <string name="snackbar_saved">gespeichert</string>
     <string name="snackbar_reset">zurückgesetzt</string>
 
+    <!-- calculator: hand-off to aaps -->
+    <string name="action_send_aaps">an aaps</string>
+    <string name="action_send_aaps_amount">%1$d g an aaps</string>
+    <string name="snackbar_aaps_copied">%1$d g kopiert, in aaps einfügen</string>
+
     <!-- calculator: barcode -->
     <string name="action_scan">barcode scannen</string>
     <string name="action_remove_product">produkt entfernen</string>

@@ -71,4 +71,15 @@ class DecimalTextTest {
         assertEquals(DisplayNumber("2", isApproximate = false), DecimalText.format(CarbUnit.BE.convert(Fraction.of(24))!!))
         assertEquals(DisplayNumber("0.8", isApproximate = true), DecimalText.format(CarbUnit.BE.convert(Fraction.of(10))!!))
     }
+
+    @Test
+    fun `whole grams round half up`() {
+        assertEquals(13, DecimalText.roundToWhole(value("12.72")))
+        assertEquals(13, DecimalText.roundToWhole(value("12.5")))
+        assertEquals(12, DecimalText.roundToWhole(value("12.49")))
+        assertEquals(0, DecimalText.roundToWhole(value("0.499")))
+        assertEquals(1, DecimalText.roundToWhole(value("0.5")))
+        assertEquals(0, DecimalText.roundToWhole(Fraction.ZERO))
+        assertEquals(33, DecimalText.roundToWhole(Fraction.of(100) / Fraction.of(3)))
+    }
 }

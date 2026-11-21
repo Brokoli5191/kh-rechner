@@ -4,6 +4,11 @@
     <!-- Only used for the Open Food Facts lookup after a barcode scan. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Needed to see whether AAPS is installed and to open it (see AndroidAapsHandoff). -->
+    <queries>
+        <package android:name="info.nightscout.androidaps" />
+    </queries>
+
     <application
         android:name=".KhRechnerApplication"
         android:allowBackup="true"
