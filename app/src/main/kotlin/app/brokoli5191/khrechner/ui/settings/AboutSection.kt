@@ -191,6 +191,8 @@ private fun ScannerRow(scanner: ScannerInfo, index: Int, count: Int, onInstall: 
         !scanner.cameraAvailable -> stringResource(R.string.scanner_status_no_camera)
         status == ScannerStatus.Ready -> stringResource(R.string.scanner_status_ready)
         status == ScannerStatus.Checking -> stringResource(R.string.scanner_status_checking)
+        // A failure is just its reason; the "nochmal" next to it says the rest.
+        status is ScannerStatus.InstallFailed -> status.reason.message()
         else -> listOfNotNull(
             stringResource(R.string.scanner_builtin_active),
             when (status) {
@@ -202,7 +204,7 @@ private fun ScannerRow(scanner: ScannerInfo, index: Int, count: Int, onInstall: 
                     } else {
                         stringResource(R.string.scanner_status_installing_percent, status.percent)
                     }
-                is ScannerStatus.InstallFailed -> status.reason.message()
+                else -> null
             },
         ).joinToString(" ")
     }
@@ -229,7 +231,7 @@ private fun ScannerRow(scanner: ScannerInfo, index: Int, count: Int, onInstall: 
     )
 }
 
-/** Why Google's scanner did not arrive, in one sentence. The details are in the log. */
+/** Why Google's scanner did not arrive, in a few words. The details are in the log. */
 @Composable
 private fun InstallFailure.message(): String = when (this) {
     InstallFailure.MeteredNetwork -> stringResource(R.string.scanner_install_failed_metered)

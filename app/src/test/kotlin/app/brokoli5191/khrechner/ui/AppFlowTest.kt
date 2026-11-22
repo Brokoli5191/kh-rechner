@@ -3,6 +3,7 @@ package app.brokoli5191.khrechner.ui
 import android.Manifest
 import android.app.Application
 import android.content.pm.PackageManager
+import android.os.Looper
 import android.provider.Settings as SystemSettings
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
@@ -42,6 +43,7 @@ import app.brokoli5191.khrechner.data.Settings
 import app.brokoli5191.khrechner.data.ThemeMode
 import app.brokoli5191.khrechner.data.UpdateFailure
 import app.brokoli5191.khrechner.ui.theme.KhRechnerTheme
+import java.time.Duration
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.first
 import org.junit.Assert.assertEquals
@@ -84,6 +86,9 @@ class AppFlowTest {
     private fun awaitText(text: String) {
         compose.waitUntil(5_000) { compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() }
     }
+
+    /** Lets the update indicator's second run out; Robolectric's clock only moves when told to. */
+    private fun passIndicator() = shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1_100))
 
     private fun grantCamera() = shadowOf(app as Application).grantPermissions(Manifest.permission.CAMERA)
 
@@ -417,13 +422,16 @@ class AppFlowTest {
         awaitText("die app scannt selbst. der google-scanner ist noch nicht geladen.")
 
         compose.onNodeWithText("laden").performClick()
-        // One sentence: that it failed and why. No status text, no version, no stack trace.
-        awaitText("die app scannt selbst. der google-scanner lässt sich nicht laden: fehler 8 in den google play-diensten.")
+        // Only the reason: no status text, no version, no stack trace, no repeat of what still works.
+        awaitText("google-dienste melden fehler 8.")
+        compose.onNodeWithText("google-dienste melden fehler 8.").assertExists()
+        compose.onNode(hasText("die app scannt selbst", substring = true)).assertDoesNotExist()
         compose.onNode(hasText("INTERNAL_ERROR", substring = true)).assertDoesNotExist()
 
-        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.MeteredNetwork))
+        app.scanner.installUpdates = listOf(InstallUpdate.Failed(InstallFailure.NoAnswer))
         compose.onNodeWithText("nochmal").performScrollTo().performClick()
-        awaitText("der google-scanner wird nur über wlan geladen.")
+        awaitText("google-dienste antworten nicht.")
+        compose.onNodeWithText("google-dienste antworten nicht.").assertExists()
 
         app.scanner.installUpdates = listOf(InstallUpdate.Done)
         compose.onNodeWithText("nochmal").performScrollTo().performClick()
@@ -441,19 +449,37 @@ class AppFlowTest {
     )
 
     @Test
+    fun `looking for updates shows the indicator for a second and asks github once a minute at most`() {
+        compose.onNodeWithText("einstellungen").performClick()
+        compose.onNodeWithText("updates").performScrollTo()
+        awaitText("noch nicht gesucht")
+
+        // The answer is there at once, the indicator stays anyway.
+        compose.onNodeWithText("suchen").performScrollTo().performClick()
+        awaitText("suche nach updates …")
+        passIndicator()
+        awaitText("kh rechner ist aktuell")
+        awaitText("heute geprüft")
+        compose.onNodeWithContentDescription("update verfügbar").assertDoesNotExist()
+
+        // Pressed again right away: the same indicator, the same answer, no second request.
+        compose.onNodeWithText("suchen").performScrollTo().performClick()
+        awaitText("suche nach updates …")
+        passIndicator()
+        awaitText("kh rechner ist aktuell")
+        assertEquals(1, app.releases.calls)
+    }
+
+    @Test
     fun `the update section finds a newer version, marks the tab and installs it on request`() {
+        app.releases.answer = ReleaseLookup.Found(newer)
         compose.onNodeWithText("einstellungen").performClick()
         compose.onNodeWithText("updates").performScrollTo()
         awaitText("noch nicht gesucht")
         compose.onNodeWithContentDescription("update verfügbar").assertDoesNotExist()
 
-        // Nothing newer out there.
         compose.onNodeWithText("suchen").performScrollTo().performClick()
-        awaitText("kh rechner ist aktuell")
-        awaitText("heute geprüft")
-
-        app.releases.answer = ReleaseLookup.Found(newer)
-        compose.onNodeWithText("suchen").performScrollTo().performClick()
+        passIndicator()
         awaitText("version 9.1.0 ist da")
         compose.onNodeWithText("was ist neu").assertExists()
         compose.onNodeWithContentDescription("update verfügbar").assertExists()
@@ -481,6 +507,8 @@ class AppFlowTest {
         compose.onNodeWithText("einstellungen").performClick()
         compose.onNodeWithText("updates").performScrollTo()
         compose.onNodeWithText("suchen").performScrollTo().performClick()
+        passIndicator()
+        awaitText("version 9.1.0 ist da")
         compose.onNodeWithText("installieren").performScrollTo().performClick()
         awaitText("das update ist anders signiert als die installierte app.")
 

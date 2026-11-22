@@ -72,6 +72,11 @@ The app updates itself from GitHub Releases. When it comes to the front, `Update
 is on. It compares the tag with the installed `versionName`. A newer release shows up under
 einstellungen → updates, with a dot on the tab.
 
+Tapping search asks at once. Within a minute of the last answer it reuses that answer instead,
+because GitHub caches the response for 60 seconds and allows only 60 requests an hour without an
+account. Either way the loading indicator stays for at least a second, so a fast answer does not
+make it flicker.
+
 Nothing is installed until the user taps install. `PackageInstallerUpdater` downloads the APK and
 compares it with the SHA-256 GitHub lists for the asset. It then checks that the file is this
 app, newer than the installed one and signed with the same key, and only then hands it to
