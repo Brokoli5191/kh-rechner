@@ -147,18 +147,19 @@
     <string name="scanner_status_checking">checking …</string>
     <string name="scanner_status_ready">google scanner ready</string>
     <string name="scanner_status_no_camera">not available: this device has no camera.</string>
-    <!-- everything below follows scanner_builtin_active in the same line -->
+    <!-- the next four follow scanner_builtin_active in the same line -->
     <string name="scanner_builtin_active">the app scans by itself.</string>
     <string name="scanner_status_unsupported">google play services is missing.</string>
     <string name="scanner_status_not_installed">the google scanner is not downloaded yet.</string>
     <string name="scanner_status_installing">the google scanner is downloading …</string>
     <string name="scanner_status_installing_percent">the google scanner is downloading … %1$d %%</string>
-    <string name="scanner_install_failed_metered">the google scanner is only downloaded over wi-fi.</string>
-    <string name="scanner_install_failed_storage">there is not enough storage for the google scanner.</string>
-    <string name="scanner_install_failed_connection">the google scanner cannot be downloaded because there is no connection.</string>
-    <string name="scanner_install_failed_not_offered">google play services does not offer the google scanner for this device.</string>
-    <string name="scanner_install_failed_no_answer">the google scanner cannot be downloaded because google play services does not answer.</string>
-    <string name="scanner_install_failed_services">the google scanner cannot be downloaded: error %1$d in google play services.</string>
+    <!-- why the google scanner failed to load; each stands alone under the title barcode scanner -->
+    <string name="scanner_install_failed_metered">downloads over wi-fi only.</string>
+    <string name="scanner_install_failed_storage">not enough storage.</string>
+    <string name="scanner_install_failed_connection">no connection.</string>
+    <string name="scanner_install_failed_not_offered">google does not offer it for this device.</string>
+    <string name="scanner_install_failed_no_answer">google services do not answer.</string>
+    <string name="scanner_install_failed_services">google services report error %1$d.</string>
     <string name="action_load">download</string>
     <string name="action_retry">retry</string>
     <string name="action_back">back</string>

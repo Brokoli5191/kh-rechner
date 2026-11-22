@@ -157,18 +157,19 @@
     <string name="scanner_status_checking">wird geprüft …</string>
     <string name="scanner_status_ready">google-scanner bereit</string>
     <string name="scanner_status_no_camera">nicht verfügbar: dieses gerät hat keine kamera.</string>
-    <!-- everything below follows scanner_builtin_active in the same line -->
+    <!-- the next four follow scanner_builtin_active in the same line -->
     <string name="scanner_builtin_active">die app scannt selbst.</string>
     <string name="scanner_status_unsupported">google play-dienste fehlen.</string>
     <string name="scanner_status_not_installed">der google-scanner ist noch nicht geladen.</string>
     <string name="scanner_status_installing">der google-scanner wird geladen …</string>
     <string name="scanner_status_installing_percent">der google-scanner wird geladen … %1$d %%</string>
-    <string name="scanner_install_failed_metered">der google-scanner wird nur über wlan geladen.</string>
-    <string name="scanner_install_failed_storage">für den google-scanner fehlt speicherplatz.</string>
-    <string name="scanner_install_failed_connection">der google-scanner lässt sich nicht laden, weil die verbindung fehlt.</string>
-    <string name="scanner_install_failed_not_offered">google play-dienste bieten den google-scanner für dieses gerät nicht an.</string>
-    <string name="scanner_install_failed_no_answer">der google-scanner lässt sich nicht laden, weil google play-dienste nicht antworten.</string>
-    <string name="scanner_install_failed_services">der google-scanner lässt sich nicht laden: fehler %1$d in den google play-diensten.</string>
+    <!-- why the google scanner failed to load; each stands alone under the title barcode-scanner -->
+    <string name="scanner_install_failed_metered">lädt nur über wlan.</string>
+    <string name="scanner_install_failed_storage">zu wenig speicherplatz.</string>
+    <string name="scanner_install_failed_connection">keine verbindung.</string>
+    <string name="scanner_install_failed_not_offered">google bietet ihn für dieses gerät nicht an.</string>
+    <string name="scanner_install_failed_no_answer">google-dienste antworten nicht.</string>
+    <string name="scanner_install_failed_services">google-dienste melden fehler %1$d.</string>
     <string name="action_load">laden</string>
     <string name="action_retry">nochmal</string>
     <string name="action_back">zurück</string>

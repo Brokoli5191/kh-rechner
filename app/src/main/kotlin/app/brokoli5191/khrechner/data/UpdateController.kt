@@ -6,9 +6,11 @@ import androidx.datastore.core.DataStore
 import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -97,7 +99,20 @@ class UpdateController(
         val before = _status.value
         _status.value = UpdateStatus.Checking
         job = scope.launch {
-            when (val lookup = source.latest()) {
+            // GitHub usually answers in a fraction of a second; shown that briefly, the indicator
+            // only flickers.
+            val shown = launch { delay(MINIMUM_CHECKING) }
+            // GitHub caches this answer for a minute, so asking again sooner learns nothing and
+            // only uses up the 60 requests an hour it allows without an account.
+            val recent = store.data.first().takeIf { now() - it.checkedAt in 0 until SAME_ANSWER_MILLIS }
+            if (recent != null) {
+                shown.join()
+                _status.value = statusFor(recent)
+                return@launch
+            }
+            val lookup = source.latest()
+            shown.join()
+            when (lookup) {
                 is ReleaseLookup.Found -> {
                     val newer = lookup.release.takeIf { AppVersion.isNewer(it.version, installedVersion) }
                     val record = UpdateRecord(checkedAt = now(), latest = newer)
@@ -174,5 +189,7 @@ class UpdateController(
 
     private companion object {
         const val TAG = "UpdateController"
+        val MINIMUM_CHECKING = 1.seconds
+        const val SAME_ANSWER_MILLIS = 60_000L
     }
 }

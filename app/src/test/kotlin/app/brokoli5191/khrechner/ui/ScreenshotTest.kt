@@ -2,6 +2,7 @@ package app.brokoli5191.khrechner.ui
 
 import android.Manifest
 import android.app.Application
+import android.os.Looper
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
@@ -47,6 +48,7 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.MultiFormatWriter
+import java.time.Duration
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
@@ -296,6 +298,8 @@ class ScreenshotTest {
         compose.onNodeWithText("einstellungen").performClick()
         compose.onNodeWithText("updates").performScrollTo()
         compose.onNodeWithText("suchen").performScrollTo().performClick()
+        // The update indicator holds for a second; Robolectric's clock only moves when told to.
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1_100))
         awaitText("version 9.1.0 ist da")
         compose.onNodeWithText("beim öffnen suchen").performScrollTo()
         capture("settings-updates")
